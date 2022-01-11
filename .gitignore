@@ -1,0 +1,9 @@
+.idea
+venv
+*.log
+__pycache__
+*.sqlite3
+*.ipynb
+.DS_Store
+data/
+*.json

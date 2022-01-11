@@ -1,0 +1,13 @@
+black==21.12b0
+dydx-v3-python==1.2.1
+pylint==2.11.1
+python-binance==1.0.15
+plotly==5.3.1
+scipy==1.7.3
+web3==5.24.0
+websockets==9.1
+typing-extensions==3.10.0.2
+numpy==1.21.3
+sortedcontainers==2.4.0
+pyTelegramBotAPI==4.2.2
+pytest==6.2.5

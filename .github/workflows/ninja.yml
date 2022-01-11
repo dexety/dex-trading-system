@@ -1,0 +1,49 @@
+name: Ninja CI
+
+on: [push]
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+    name: Python linter
+    steps:
+      - name: Check Out Repo
+        uses: actions/checkout@v2
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Install dependencies for linter
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements-lint.txt
+
+      - name: Run linter
+        run: pylint `find . -name "*.py" -not -path "./research/*" -not -path "./collect_data/*"`
+
+  test:
+    needs: linter
+    runs-on: ubuntu-latest
+    name: Ninja tests
+    steps:
+      - name: Check Out Repo
+        uses: actions/checkout@v2
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Install dependencies for tests
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements-tests.txt
+
+      - name: Run tests
+        run: python3 -m pytest tests/ -x -W ignore::DeprecationWarning
+        env:
+          ETH_ADDRESS: ${{ secrets.ETH_ADDRESS }}
+          ETH_PRIVATE_KEY: ${{ secrets.ETH_PRIVATE_KEY }}
+          INFURA_NODE: ${{ secrets.INFURA_NODE }}
