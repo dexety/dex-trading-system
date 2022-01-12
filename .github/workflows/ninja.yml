@@ -1,6 +1,10 @@
 name: Ninja CI
 
-on: [push]
+on:
+  pull_request:
+  push:
+    branches:
+    - main
 
 jobs:
   linter:
