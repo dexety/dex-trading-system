@@ -41,11 +41,11 @@ class MarketMakingStrategy:
     order_checker_period_sec = 0.3
 
     commision_pc = 0.0005
-    spread_pc = 3 * commision_pc
+    half_spread_pc = 4 * commision_pc
+    after_punch_spread_pc = 4 * commision_pc
     price_change_threshold = commision_pc / 7
 
     is_running = False
-    currency_balance = 0
 
     trade_update_mutex = Lock()
 
@@ -134,18 +134,15 @@ class MarketMakingStrategy:
         self.trade_update_mutex.acquire()
         start_time = time.time()
 
-        self.update_currency_balance()
-
-        if self.currency_balance == 0:
-            self.threading_replace_mirror_orders()
-            open_positions = self.get_open_positions_by_dydx_api()
-            if len(open_positions) != 0:
-                self.cancel_all_orders()
-                time.sleep(0.2)
-                self.set_order_for_second_punch()
-                self.process_second_punch()
-        else:
+        self.threading_replace_mirror_orders()
+        open_positions = self.get_open_positions_by_dydx_api()
+        if len(open_positions) != 0:
+            self.is_running = False
+            self.cancel_all_orders()
+            time.sleep(0.1)
+            self.set_order_for_second_punch()
             self.process_second_punch()
+            self.is_running = True
 
         Logger.debug(
             f"Spent time processing update {1000 * (time.time() - start_time)} ms"
@@ -174,8 +171,7 @@ class MarketMakingStrategy:
 
     def check_orders(self) -> None:
         if self.is_running and (
-            self.currency_balance == 0
-            and self.need_to_update_our_orders()
+            self.need_to_update_our_orders()
             or len(self.get_our_orders_by_dydx_api()) == 0
         ):
             self.on_trade_update_notify(datetime.utcnow())
@@ -206,35 +202,6 @@ class MarketMakingStrategy:
             order_boook_update, is_first_request=is_first_request
         )
 
-    def update_currency_balance(self) -> None:
-        our_orders = self.get_our_orders_by_dydx_api()
-        if len(our_orders) == 1:
-            if our_orders[0]["side"] == "BUY":
-                self.currency_balance = -1
-            elif our_orders[0]["side"] == "SELL":
-                self.currency_balance = 1
-        elif len(our_orders) == 2 and (
-            our_orders[0]["status"] != "OPEN"
-            or our_orders[1]["status"] != "OPEN"
-        ):
-            if (
-                our_orders[0]["status"] != "OPEN"
-                and our_orders[0]["status"] != "OPEN"
-            ):
-                self.currency_balance = 0
-            elif our_orders[0]["status"] != "OPEN":
-                if our_orders[0]["side"] == "BUY":
-                    self.currency_balance = 1
-                elif our_orders[0]["side"] == "SELL":
-                    self.currency_balance = -1
-            elif our_orders[1]["status"] != "OPEN":
-                if our_orders[1]["side"] == "BUY":
-                    self.currency_balance = 1
-                elif our_orders[1]["side"] == "SELL":
-                    self.currency_balance = -1
-        else:
-            self.currency_balance = 0
-
     def cancel_order(self, side: str) -> None:
         Logger.debug(f"Cancel {side}")
         if self.open_orders[side] is not None:
@@ -242,25 +209,10 @@ class MarketMakingStrategy:
                 cancel_order = self.dydx_connector_trades.cancel_order(
                     self.open_orders[side]["id"]
                 )
-                if (
-                    not cancel_order["cancelOrder"]
-                    or cancel_order["cancelOrder"]["status"] != "OPEN"
-                ):
-                    if side == "BUY":
-                        self.currency_balance = 1
-                    elif side == "SELL":
-                        self.currency_balance = -1
             except DydxApiError as error:
                 Logger.debug(f"Cancel error: {error}")
-                if side == "BUY":
-                    self.currency_balance = 1
-                elif side == "SELL":
-                    self.currency_balance = -1
 
     def threading_replace_mirror_orders(self) -> None:
-        if self.currency_balance != 0:
-            return
-
         if self.open_orders["BUY"]:
             thread_send_order_buy = Thread(
                 target=self.send_limit_order,
@@ -305,13 +257,14 @@ class MarketMakingStrategy:
         average_price = sum(
             map(lambda position: float(position["entryPrice"]), positions)
         ) / len(positions)
+        Logger.debug(f"Size of opened positions: {total_size}, average price: {average_price}")
         self.set_null_open_orders()
         if total_size > 0:
             self.send_limit_order(
                 side="SELL",
                 cancel_id=None,
                 spread=None,
-                price=average_price * (1 + 2 * self.spread_pc),
+                price=average_price * (1 + self.after_punch_spread_pc),
                 size=total_size,
             )
         elif total_size < 0:
@@ -319,7 +272,7 @@ class MarketMakingStrategy:
                 side="BUY",
                 cancel_id=None,
                 spread=None,
-                price=average_price * (1 - 2 * self.spread_pc),
+                price=average_price * (1 - self.after_punch_spread_pc),
                 size=-total_size,
             )
 
@@ -341,7 +294,6 @@ class MarketMakingStrategy:
         iters_num = 10
         for _ in range(iters_num):
             self.wait_for_second_punch(iters_num)
-        self.currency_balance = 0
         orders = self.get_our_orders_by_dydx_api()
         if len(orders) == 0:
             self.set_null_open_orders()
@@ -355,7 +307,6 @@ class MarketMakingStrategy:
                 self.cancel_order(side)
             except DydxApiError:
                 break
-            self.currency_balance = 0
             Logger.debug("Re-order")
             if side == "BUY":
                 self.send_limit_order(
@@ -385,7 +336,7 @@ class MarketMakingStrategy:
 
     def get_new_price(self, side: str, spread=None) -> float:
         if spread == None:
-            spread = self.spread_pc
+            spread = self.half_spread_pc
         if side == "BUY":
             return round(
                 self.get_max_bid() - self.get_min_ask() * spread,
@@ -407,7 +358,7 @@ class MarketMakingStrategy:
         size=None,
     ) -> None:
         if spread == None:
-            spread = self.spread_pc
+            spread = self.half_spread_pc
 
         if size == None:
             size = self.buying_power
