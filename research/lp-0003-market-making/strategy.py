@@ -344,7 +344,7 @@ class MarketMakingStrategy:
         self.currency_balance = 0
         orders = self.get_our_orders_by_dydx_api()
         if len(orders) == 0:
-        self.set_null_open_orders()
+            self.set_null_open_orders()
             return
         side = orders[0]["side"]
         while True:
