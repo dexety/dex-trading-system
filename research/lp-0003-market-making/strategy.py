@@ -41,8 +41,8 @@ class MarketMakingStrategy:
     order_checker_period_sec = 0.3
 
     commision_pc = 0.0005
-    half_spread_pc = 4 * commision_pc
-    after_punch_spread_pc = 4 * commision_pc
+    half_spread_pc = 2 * commision_pc
+    after_punch_spread_pc = 3 * commision_pc
     price_change_threshold = commision_pc / 7
 
     is_running = False
@@ -299,6 +299,7 @@ class MarketMakingStrategy:
             self.set_null_open_orders()
             return
         side = orders[0]["side"]
+        size = orders[0]["size"]
         while True:
             orders = self.get_our_orders_by_dydx_api()
             if len(orders) == 0:
@@ -314,6 +315,7 @@ class MarketMakingStrategy:
                     cancel_id=None,
                     spread=0,
                     price=self.get_max_bid() - 2 * self.get_price_tick(),
+                    size=size,
                 )
             elif side == "SELL":
                 self.send_limit_order(
@@ -321,6 +323,7 @@ class MarketMakingStrategy:
                     cancel_id=None,
                     spread=0,
                     price=self.get_min_ask() + 2 * self.get_price_tick(),
+                    size=size,
                 )
             time.sleep(5)
         self.set_null_open_orders()
