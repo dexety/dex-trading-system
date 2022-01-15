@@ -4,3 +4,4 @@ websockets==9.1
 typing-extensions==3.10.0.2
 sortedcontainers==2.4.0
 pytest==4.6.11
+uniswap-python==0.5.5
