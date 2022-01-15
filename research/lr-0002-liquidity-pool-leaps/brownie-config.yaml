@@ -1,0 +1,31 @@
+dependencies:
+  - Uniswap/v3-core@1.0.0
+  - Uniswap/v3-periphery@1.3.0
+  - OpenZeppelin/openzeppelin-contracts@3.4.0
+compiler:
+  solc:
+    remappings:
+      - '@uniswap/v3-core=Uniswap/v3-core@1.0.0'
+      - '@uniswap/v3-periphery=Uniswap/v3-periphery@1.3.0'
+      - '@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.4.0'
+networks:
+  ropsten:
+    aave_lending_pool_v2: "0x1c8756FD2B28e9426CDBDcC7E3c4d64fa9A54728"
+    weth_token: "0xc778417e063141139fce010982780140aa0cd5ab"
+    dai_token: '0xad6d458402f60fd3bd25163575031acdce07538d'
+    uniswap_swap_router: '0xE592427A0AEce92De3Edee1F18E0157C05861564'
+  kovan:
+    uniswapV3factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984'
+    weth_token: '0xd0a1e359811322d97991e03f863a0c30c2cf029c'
+    dai_token: '0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa'
+  mainnet:
+    uniswapV3factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984'
+    weth_token: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+    usdt_token: '0xdac17f958d2ee523a2206206994597c13d831ec7'
+    usdc_token: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+    dai_token: '0x6b175474e89094c44da98b954eedeac495271d0f'
+wallets:
+  from_key: ${ETH_PRIVATE_KEY}
+  test_key: ${ETH_TEST_PRIVATE_KEY}
+dotenv:
+  .env

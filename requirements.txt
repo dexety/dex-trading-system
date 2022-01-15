@@ -11,3 +11,4 @@ numpy==1.21.3
 sortedcontainers==2.4.0
 pyTelegramBotAPI==4.2.2
 pytest==6.2.5
+brownie==1.17.2
