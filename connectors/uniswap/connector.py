@@ -2,6 +2,7 @@ import os
 from uniswap import Uniswap
 
 
+# pylint: disable=too-few-public-methods
 class L1PoolConnector:
     def __init__(self, eth_address: str, eth_private_key: str) -> None:
         INFURA_NODE = os.getenv("INFURA_NODE")

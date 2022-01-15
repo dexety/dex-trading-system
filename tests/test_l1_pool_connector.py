@@ -6,6 +6,7 @@ sys.path.append("../")
 from connectors.uniswap.connector import L1PoolConnector
 
 
+# pylint: disable=too-few-public-methods
 class TestL1PoolConnector:
     ETH_KEY = os.getenv("ETH_ADDRESS")
     ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
