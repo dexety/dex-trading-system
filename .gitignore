@@ -9,9 +9,9 @@ data/
 *.json
 
 # lr-0002 brownie
-research/lr-0002-liquidity-pool-leaps/__pycache__
-research/lr-0002-liquidity-pool-leaps/.history
-research/lr-0002-liquidity-pool-leaps/.hypothesis/
-research/lr-0002-liquidity-pool-leaps/build/
-research/lr-0002-liquidity-pool-leaps/reports/
-research/lr-0002-liquidity-pool-leaps/.env
+*__pycache__
+*.history
+*.hypothesis/
+*build/
+*reports/
+*.env
