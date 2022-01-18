@@ -7,3 +7,11 @@ __pycache__
 .DS_Store
 data/
 *.json
+
+# lr-0002 brownie
+*__pycache__
+*.history
+*.hypothesis/
+*build/
+*reports/
+*.env
