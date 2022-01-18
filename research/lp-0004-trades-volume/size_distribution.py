@@ -8,14 +8,14 @@ import plotly.graph_objs as go
 class TradesSize:
     trades_window_sec = 60
     punch_window_sec = 30
-    punch_round = 4
+    punch_round = 5
     data_it = 0
     trades_window = deque()
     punch_window = deque()
     punch_plot = SortedDict()
 
     def __init__(self, path: str) -> None:
-        self.data = json.load(open(path, "r", encoding="utf8"))
+        self.data = json.load(open(path, "r", encoding="utf8"))[:100000]
         self.set_trades_window()
         self.set_punch_window()
 
@@ -36,9 +36,7 @@ class TradesSize:
     def set_trades_window(self) -> None:
         while len(self.trades_window) == 0 or self.get_datetime(
             self.trades_window[-1]["createdAt"]
-        ) - self.get_datetime(
-            self.trades_window[0]["createdAt"]
-        ) <= timedelta(
+        ) - self.get_datetime(self.trades_window[0]["createdAt"]) <= timedelta(
             seconds=self.trades_window_sec
         ):
             self.trades_window.append(self.get_new_trade())
@@ -46,9 +44,7 @@ class TradesSize:
     def set_punch_window(self) -> None:
         while len(self.punch_window) == 0 or self.get_datetime(
             self.punch_window[-1]["createdAt"]
-        ) - self.get_datetime(
-            self.punch_window[0]["createdAt"]
-        ) <= timedelta(
+        ) - self.get_datetime(self.punch_window[0]["createdAt"]) <= timedelta(
             seconds=self.punch_window_sec
         ):
             self.punch_window.append(self.get_new_trade())
@@ -57,18 +53,20 @@ class TradesSize:
         if len(self.punch_window):
             self.trades_window.append(self.punch_window[0])
             self.punch_window.popleft()
-        while self.is_data_left() and (len(self.punch_window) == 0  or (
-            self.get_datetime(self.punch_window[-1]["createdAt"])
-            - self.get_datetime(self.punch_window[0]["createdAt"])
-        ) < timedelta(seconds=self.punch_window_sec)):
+        while self.is_data_left() and (
+            len(self.punch_window) == 0
+            or (
+                self.get_datetime(self.punch_window[-1]["createdAt"])
+                - self.get_datetime(self.punch_window[0]["createdAt"])
+            )
+            < timedelta(seconds=self.punch_window_sec)
+        ):
             self.punch_window.append(self.get_new_trade())
 
     def update_trades_window(self) -> None:
         while len(self.trades_window) > 0 and self.get_datetime(
             self.trades_window[-1]["createdAt"]
-        ) - self.get_datetime(
-            self.trades_window[0]["createdAt"]
-        ) > timedelta(
+        ) - self.get_datetime(self.trades_window[0]["createdAt"]) > timedelta(
             seconds=self.trades_window_sec
         ):
             self.trades_window.popleft()
@@ -87,22 +85,28 @@ class TradesSize:
         punch_window_price = list(
             map(lambda trade: float(trade["price"]), self.punch_window)
         )
-        punch_pc = round(abs(1 - max(punch_window_price) / min(punch_window_price)), self.punch_round)
+        punch_pc = round(
+            max(punch_window_price) / min(punch_window_price) - 1,
+            self.punch_round,
+        )
         trades_size = sum(
             map(lambda trade: float(trade["size"]), self.trades_window)
         )
         if punch_pc in self.punch_plot:
-            self.punch_plot[punch_pc]['size'] = (self.punch_plot[punch_pc]['size'] * self.punch_plot[punch_pc]['count'] + trades_size) / (self.punch_plot[punch_pc]['count'] + 1)
-            self.punch_plot[punch_pc]['count'] += 1
+            self.punch_plot[punch_pc]["size"] = (
+                self.punch_plot[punch_pc]["size"]
+                * self.punch_plot[punch_pc]["count"]
+                + trades_size
+            ) / (self.punch_plot[punch_pc]["count"] + 1)
+            self.punch_plot[punch_pc]["count"] += 1
         else:
-            self.punch_plot[punch_pc] = {'size': trades_size, 'count': 1}
-        if punch_pc > 0.03:
-            print(self.punch_window)
-            exit()
+            self.punch_plot[punch_pc] = {"size": trades_size, "count": 1}
 
     def plot(self) -> None:
-        sizes=list(map(lambda x: float(x[1]['size']), self.punch_plot.items()))
-        punches=list(map(lambda x: float(x[0]), self.punch_plot.items()))
+        sizes = list(
+            map(lambda x: float(x[1]["size"]), self.punch_plot.items())
+        )
+        punches = list(map(lambda x: float(x[0]), self.punch_plot.items()))
         plot_data = list(zip(sizes, punches))
         plot_data.sort()
         fig = go.Figure()
