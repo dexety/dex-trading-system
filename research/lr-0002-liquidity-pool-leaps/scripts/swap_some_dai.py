@@ -27,5 +27,5 @@ def main():
         print("Done")
 
     print("Initiating swap...")
-    swap.swapExactInputSingle(amountIn, {"from": account})
-    print("Done")
+    amountOut = swap.swapExactInputSingle(amountIn, {"from": account})
+    print(f"Swapped 10 DAI to {amountOut / 10**18} ETH")
