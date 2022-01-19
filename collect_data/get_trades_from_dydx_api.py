@@ -33,10 +33,10 @@ def main():
     print("collection of trades begin")
     print("it may takes a lot of time")
     start_dt = datetime(2021, 11, 1)
-    end_dt = datetime(2021, 11, 7)
+    end_dt = datetime(2021, 12, 21)
     trades_data = get_trades_from_dydx_api("ETH-USD", start_dt, end_dt, True)
     with open(
-        f"../data/trades/trades-{get_formated_dt(start_dt)}-{get_formated_dt(end_dt)}.json",
+        f"../data/trades/raw/trades-{get_formated_dt(start_dt)}-{get_formated_dt(end_dt)}.json",
         "w",
         encoding="utf8",
     ) as file:

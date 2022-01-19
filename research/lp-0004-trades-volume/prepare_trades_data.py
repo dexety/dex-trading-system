@@ -1,23 +1,29 @@
 import json
 import csv
-import numpy as np
 from collections import deque
 from datetime import datetime, timedelta
+import pandas as pd
+from tqdm import tqdm
 
 
-class TradesSize:
+class DataParser:
     punch_threashold = 0.0002
-    trades_window_sec = 10
-    punch_window_sec = 10
+    trades_window_sec = 30
+    trades_window_timestamps_num = 3
+    punch_window_sec = 30
+    punch_window_timestamps_num = 3
     punch_round = 4
     data_it = 0
     trades_window = {"BUY": deque(), "SELL": deque()}
     punch_window = {"BUY": deque(), "SELL": deque()}
-    outoput_data = []
+    output_data = []
     SIDES = ["BUY", "SELL"]
 
-    def __init__(self, path: str) -> None:
-        self.data = json.load(open(path, "r", encoding="utf8"))
+    def __init__(self, input_path: str, output_path: str) -> None:
+        self.data = json.load(open(input_path, "r", encoding="utf8"))
+        self.input_path = input_path
+        self.progress_bar = tqdm(range(len(self.data)))
+        self.output_path = output_path
         self.init_windows()
 
     def init_windows(self) -> None:
@@ -33,6 +39,7 @@ class TradesSize:
         return datetime.strptime(string_time, "%Y-%m-%dT%H:%M:%S.%fZ")
 
     def get_new_trade(self) -> dict:
+        self.progress_bar.update()
         if self.is_data_left():
             trade = self.data[self.data_it]
             self.data_it += 1
@@ -200,53 +207,84 @@ class TradesSize:
                 self.punch_round,
             ),
         }
-        trades_size = {
-            "BUY": sum(
-                map(
-                    lambda trade: float(trade["size"]),
-                    self.trades_window["BUY"],
+
+        update = dict()
+
+        for window_sec in range(
+            self.trades_window_sec // self.trades_window_timestamps_num,
+            self.trades_window_sec + 1,
+            self.trades_window_sec // self.trades_window_timestamps_num,
+        ):
+            for side in self.SIDES:
+                update["trades-" + side + "-" + str(window_sec) + "-sec"] = (
+                    sum(
+                        map(
+                            lambda trade: float(trade["size"]),
+                            filter(
+                                lambda trade: self.get_datetime(
+                                    self.trades_window[side][-1]["createdAt"]
+                                )
+                                - self.get_datetime(trade["createdAt"])
+                                <= timedelta(seconds=window_sec),
+                                self.trades_window[side],
+                            ),
+                        )
+                    )
+                    if self.trades_window[side]
+                    else 0
                 )
-            )
-            if self.trades_window["BUY"]
-            else 0,
-            "SELL": sum(
-                map(
-                    lambda trade: float(trade["size"]),
-                    self.trades_window["SELL"],
-                )
-            )
-            if self.trades_window["SELL"]
-            else 0,
-        }
+                if self.punch_window[side]:
+                    update["punch-" + side + "-" + str(window_sec) + "-sec"] = (
+                        round(
+                            1
+                            - max(punch_window_price[side])
+                            / min(punch_window_price[side]),
+                            self.punch_round,
+                        )
+                        if side == "SELL"
+                        else round(
+                            max(punch_window_price[side])
+                            / min(punch_window_price[side])
+                            - 1,
+                            self.punch_round,
+                        )
+                    )
+                else:
+                    update["punch-" + side + "-" + str(window_sec) + "-sec"] = 0
+
         if (
-            max(abs(punch_pc["SELL"]), abs(punch_pc["BUY"]))
+            max(
+                map(
+                    lambda elem: abs(elem[1]),
+                    dict(
+                        filter(lambda elem: "punch" in elem[0], update.items())
+                    ).items(),
+                )
+            )
             > self.punch_threashold
         ):
-            self.outoput_data.append(
-                {
-                    "punch_sell": punch_pc["SELL"],
-                    "punch_buy": punch_pc["BUY"],
-                    "size_sell": trades_size["SELL"],
-                    "size_buy": trades_size["BUY"],
-                }
-            )
+            self.output_data.append(update)
             self.reset_windows()
             self.init_windows()
 
     def write_data(self) -> None:
-        field_names = ["punch_sell", "punch_buy", "size_sell", "size_buy"]
-        with open("trades_size.csv", "w") as csvfile:
+        field_names = list(self.output_data[0].keys())
+        with open(self.output_path, "w") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=field_names)
             writer.writeheader()
-            writer.writerows(self.outoput_data)
+            writer.writerows(self.output_data)
 
 
 def main():
-    ts = TradesSize(
-        "../../data/trades/trades-2021_12_1_0_0_0-2021_12_21_0_0_0.json"
+    input_path = (
+        "../../data/trades/raw/trades-2021_11_1_0_0_0-2021_12_21_0_0_0.json"
     )
-    ts.run()
-    ts.write_data()
+    output_path = "trades-df-2021_11_1_0_0_0-2021_12_21_0_0_0.csv"
+    dp = DataParser(input_path, output_path)
+    dp.run()
+    dp.write_data()
+    df = pd.read_csv(output_path)
+    print(df)
 
 
 if __name__ == "__main__":

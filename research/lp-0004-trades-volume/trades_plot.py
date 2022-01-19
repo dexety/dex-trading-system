@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 def main():
     data = json.load(
         open(
-            "../../data/trades/trades-2021_12_1_0_0_0-2021_12_21_0_0_0.json",
+            "../../data/trades/raw/trades-2021_12_1_0_0_0-2021_12_21_0_0_0.json",
             "r",
             encoding="utf8",
         )

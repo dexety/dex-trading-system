@@ -128,7 +128,7 @@ class TradesSize:
 
 def main():
     ts = TradesSize(
-        "../../data/trades/trades-2021_12_1_0_0_0-2021_12_21_0_0_0.json"
+        "../../data/raw/trades/trades-2021_12_1_0_0_0-2021_12_21_0_0_0.json"
     )
     ts.run()
     ts.plot()
