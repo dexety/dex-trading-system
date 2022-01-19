@@ -7,12 +7,11 @@ from tqdm import tqdm
 
 
 class DataParser:
-    punch_threashold = 0.0002
-    trades_window_sec = 30
-    trades_window_timestamps_num = 3
+    punch_threashold = 0.0001
+    trades_window_sec = 60
+    trades_window_timestamps_num = 10
     punch_window_sec = 30
     punch_window_timestamps_num = 3
-    punch_round = 4
     data_it = 0
     trades_window = {"BUY": deque(), "SELL": deque()}
     punch_window = {"BUY": deque(), "SELL": deque()}
@@ -182,7 +181,7 @@ class DataParser:
             ),
         }
         punch_pc = {
-            "BUY": round(
+            "BUY": (
                 (
                     (
                         max(punch_window_price["BUY"])
@@ -191,10 +190,9 @@ class DataParser:
                     )
                     if punch_window_price["BUY"]
                     else 0
-                ),
-                self.punch_round,
+                )
             ),
-            "SELL": round(
+            "SELL": (
                 (
                     (
                         1
@@ -203,8 +201,7 @@ class DataParser:
                     )
                     if punch_window_price["SELL"]
                     else 0
-                ),
-                self.punch_round,
+                )
             ),
         }
 
@@ -235,18 +232,16 @@ class DataParser:
                 )
                 if self.punch_window[side]:
                     update["punch-" + side + "-" + str(window_sec) + "-sec"] = (
-                        round(
+                        (
                             1
                             - max(punch_window_price[side])
-                            / min(punch_window_price[side]),
-                            self.punch_round,
+                            / min(punch_window_price[side])
                         )
                         if side == "SELL"
-                        else round(
+                        else (
                             max(punch_window_price[side])
                             / min(punch_window_price[side])
-                            - 1,
-                            self.punch_round,
+                            - 1
                         )
                     )
                 else:
