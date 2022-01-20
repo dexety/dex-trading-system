@@ -3,6 +3,7 @@ import csv
 from collections import deque
 from datetime import datetime, timedelta
 import pandas as pd
+import numpy as np
 from tqdm import tqdm
 
 
@@ -12,6 +13,7 @@ class DataParser:
     trades_window_timestamps_num = 10
     punch_window_sec = 30
     punch_window_timestamps_num = 3
+    random_data_pc = 0.001
     data_it = 0
     trades_window = {"BUY": deque(), "SELL": deque()}
     punch_window = {"BUY": deque(), "SELL": deque()}
@@ -232,7 +234,7 @@ class DataParser:
                     ).items(),
                 )
             )
-            > self.punch_threashold
+            > self.punch_threashold or np.random.random() < self.random_data_pc
         ):
             self.output_data.append(update)
             self.reset_windows()
