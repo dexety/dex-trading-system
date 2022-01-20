@@ -6,6 +6,12 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
+def exp_moving_average(window, alpha = 0.5) -> float:
+    ema = float(window[0]["price"])
+    for i in range(1, len(window)):
+        ema = ema + alpha * (float(window[i]["price"]) - ema)
+    
+    return ema
 
 class DataParser:
     punch_threashold = 0.0001
@@ -15,8 +21,49 @@ class DataParser:
     punch_window_timestamps_num = 3
     random_data_pc = 0.001
     data_it = 0
+    indicator_functions = {
+        "trade-volume": (
+            lambda window: sum(map(lambda trade: float(trade["size"]), window))
+            if window
+            else 0
+        ),
+        "moving-average": (
+            lambda window: (
+                sum(map(lambda trade: float(trade["price"]), window))
+                / len(window)
+            )
+            if window
+            else 0
+        ),
+        "weighted-moving-average": (
+            lambda window: (
+                sum(map(lambda trade: float(trade["price"]) * float(trade["size"]), window))
+                / sum(map(lambda trade: float(trade["size"]), window))
+            )
+            if window
+            else 0
+        ),
+        "exp-moving-average": (
+            lambda window: exp_moving_average(window)     
+        ),
+        "stochastic-oscillator": (
+            lambda window: (
+                (
+                    float(window[-1]["price"])
+                    - float(min(window, key=lambda trade: float(trade["price"]))["price"])
+                )
+                / (
+                    max(1, float(max(window, key=lambda trade: float(trade["price"]))["price"])
+                    - float(min(window, key=lambda trade: float(trade["price"]))["price"]))
+                )
+            )
+            if window
+            else 0
+        ),
+    }
     trades_window = {"BUY": deque(), "SELL": deque()}
     punch_window = {"BUY": deque(), "SELL": deque()}
+    window_lengths = []
     output_data = []
     SIDES = ["BUY", "SELL"]
 
@@ -168,62 +215,62 @@ class DataParser:
                 self.add_result()
 
     def add_result(self) -> None:
-        punch_window_price = {
-            "BUY": list(
-                map(
-                    lambda trade: float(trade["price"]),
-                    self.punch_window["BUY"],
-                )
-            ),
-            "SELL": list(
-                map(
-                    lambda trade: float(trade["price"]),
-                    self.punch_window["SELL"],
-                )
-            ),
-        }
-
         update = dict()
 
-        for window_sec in range(
-            self.trades_window_sec // self.trades_window_timestamps_num,
-            self.trades_window_sec + 1,
-            self.trades_window_sec // self.trades_window_timestamps_num,
-        ):
-            for side in self.SIDES:
-                update["trades-" + side + "-" + str(window_sec) + "-sec"] = (
-                    sum(
-                        map(
-                            lambda trade: float(trade["size"]),
-                            filter(
-                                lambda trade: self.get_datetime(
-                                    self.trades_window[side][-1]["createdAt"]
-                                )
-                                - self.get_datetime(trade["createdAt"])
-                                <= timedelta(seconds=window_sec),
-                                self.trades_window[side],
-                            ),
+        for side in self.SIDES:
+            for window_sec in range(
+                self.trades_window_sec // self.trades_window_timestamps_num,
+                self.trades_window_sec + 1,
+                self.trades_window_sec // self.trades_window_timestamps_num,
+            ):
+                window_slice = list(
+                    filter(
+                        lambda trade: self.get_datetime(
+                            self.trades_window[side][-1]["createdAt"]
                         )
+                        - self.get_datetime(trade["createdAt"])
+                        <= timedelta(seconds=window_sec),
+                        self.trades_window[side],
                     )
-                    if self.trades_window[side]
-                    else 0
                 )
-                if self.punch_window[side]:
-                    update["punch-" + side + "-" + str(window_sec) + "-sec"] = (
-                        (
-                            1
-                            - max(punch_window_price[side])
-                            / min(punch_window_price[side])
+
+                for indicator_name in self.indicator_functions:
+                    column_name = (
+                        indicator_name
+                        + "-"
+                        + side
+                        + "-"
+                        + str(window_sec)
+                        + "-sec"
+                    )
+                    update[column_name] = self.indicator_functions[
+                        indicator_name
+                    ](window_slice)
+
+            update[
+                "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
+            ] = (
+                (
+                    (
+                        1
+                        - float(
+                            max(
+                                self.punch_window[side],
+                                key=lambda a: a["price"],
+                            )["price"]
                         )
-                        if side == "SELL"
-                        else (
-                            max(punch_window_price[side])
-                            / min(punch_window_price[side])
-                            - 1
+                        / float(
+                            min(
+                                self.punch_window[side],
+                                key=lambda a: a["price"],
+                            )["price"]
                         )
                     )
-                else:
-                    update["punch-" + side + "-" + str(window_sec) + "-sec"] = 0
+                    * (1 if side == "SELL" else -1)
+                )
+                if self.punch_window[side]
+                else 0
+            )
 
         if (
             max(
@@ -234,7 +281,8 @@ class DataParser:
                     ).items(),
                 )
             )
-            > self.punch_threashold or np.random.random() < self.random_data_pc
+            > self.punch_threashold
+            or np.random.random() < self.random_data_pc
         ):
             self.output_data.append(update)
             self.reset_windows()
