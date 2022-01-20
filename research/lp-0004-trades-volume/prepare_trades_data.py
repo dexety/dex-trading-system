@@ -180,30 +180,6 @@ class DataParser:
                 )
             ),
         }
-        punch_pc = {
-            "BUY": (
-                (
-                    (
-                        max(punch_window_price["BUY"])
-                        / min(punch_window_price["BUY"])
-                        - 1
-                    )
-                    if punch_window_price["BUY"]
-                    else 0
-                )
-            ),
-            "SELL": (
-                (
-                    (
-                        1
-                        - max(punch_window_price["SELL"])
-                        / min(punch_window_price["SELL"])
-                    )
-                    if punch_window_price["SELL"]
-                    else 0
-                )
-            ),
-        }
 
         update = dict()
 
