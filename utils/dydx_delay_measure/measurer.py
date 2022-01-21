@@ -174,6 +174,7 @@ class SpeedMeasure:
             f.seek(0)
             json.dump(cur_data, f, indent=4)
 
+    # pylint: disable=too-many-locals
     def get_orders_processing_delays(self, symbol, side, orders_num, filename):
         self.orders_info.clear()
         self.orders_num = orders_num

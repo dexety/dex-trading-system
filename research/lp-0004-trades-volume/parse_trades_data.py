@@ -12,7 +12,9 @@ class Indicators:
     def get_all_indicators():
         return {
             "trade_volume": lambda window: Indicators.trade_volume(window),
-            "moving_average_price": lambda window: Indicators.moving_average(window),
+            "moving_average_price": lambda window: Indicators.moving_average(
+                window
+            ),
             "weighted_moving_average_price": (
                 lambda window: Indicators.weighted_moving_average(window)
             ),
