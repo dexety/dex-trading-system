@@ -27,7 +27,7 @@ class MLArbitrage:
 
     update_interval_sec = 60
     window_parts = 10
-    eth_trading_budget = 0.0001
+    eth_trading_budget = 0.01
     slippage = 0.02
     symbol = MARKET_ETH_USD
 
@@ -35,6 +35,10 @@ class MLArbitrage:
     indicator_data = {}
     trade_window = deque()
     recieved_trades = []
+    latest_prices = {}
+
+    eth_current_balance = 0
+    usd_current_balance = 20
 
     trading_lock = Lock()
 
@@ -72,6 +76,8 @@ class MLArbitrage:
 
             for trade in self.recieved_trades:
                 self.trade_window.append(trade)
+                self.latest_prices[trade["side"]] = trade["price"]
+
             self.recieved_trades.clear()
 
             self.correct_trade_window()
@@ -87,13 +93,12 @@ class MLArbitrage:
                 self.sell()
 
     def count_indicators(self) -> None:
-        filtered_windows = {}
         for sec in range(
             self.update_interval_sec // self.window_parts,
             self.update_interval_sec + 1,
             self.update_interval_sec // self.window_parts,
         ):
-            filtered_windows[sec] = list(
+            filtered_window = list(
                 filter(
                     lambda trade: self.get_datetime(
                         self.trade_window[-1]["createdAt"]
@@ -104,15 +109,10 @@ class MLArbitrage:
                 )
             )
 
-        for indicator in self.indicator_funcs:
-            for sec in range(
-                self.update_interval_sec // self.window_parts,
-                self.update_interval_sec + 1,
-                self.update_interval_sec // self.window_parts,
-            ):
+            for indicator in self.indicator_funcs:
                 self.indicator_data[
                     indicator + "-" + str(sec)
-                ] = self.indicator_funcs[indicator](filtered_windows[sec])
+                ] = self.indicator_funcs[indicator](filtered_window)
 
     def correct_trade_window(self) -> None:
         last_trade_time = self.get_datetime(self.trade_window[-1]["createdAt"])
@@ -122,6 +122,7 @@ class MLArbitrage:
             < last_trade_time
         ):
             self.trade_window.popleft()
+        
 
     def predict(self) -> int:
         # TODO
@@ -142,40 +143,31 @@ class MLArbitrage:
         
         return wrapper
 
-    @lock_trade
     def buy(self) -> None:
         self.connector.send_fok_order(
             symbol=self.symbol,
             side=ORDER_SIDE_BUY,
-            price=self.last_buy_price * (1 + self.slippage / 100),
-            quantity=self.trading_budget,
+            price=self.latest_prices["BUY"] * (1 + self.slippage / 100),
+            quantity=self.eth_trading_budget,
         )
         Logger.debug("Bought")
 
-    @lock_trade
     def sell(self) -> None:
         self.connector.send_fok_order(
             symbol=self.symbol,
             side=ORDER_SIDE_SELL,
-            price=self.last_buy_price * (1 - self.slippage / 100),
-            quantity=self.trading_budget,
+            price=self.latest_prices["SELL"] * (1 - self.slippage / 100),
+            quantity=self.eth_trading_budget,
         )
         Logger.debug("Sold")
 
-    @lock_trade
     def trade_listener(self, trade) -> None:
         self.recieved_trades.append(trade)
-
-        if trade["side"] == "SELL":
-            self.last_sell_price = trade["price"]
-        else:
-            self.last_buy_price = trade["price"]
     
     def account_listener(self, update) -> None:
         # TODO
         pass
         
-
     @staticmethod
     def get_datetime(string_time: str) -> datetime:
         return datetime.strptime(string_time, "%Y-%m-%dT%H:%M:%S.%fZ")
