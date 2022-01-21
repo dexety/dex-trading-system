@@ -11,7 +11,7 @@ def main():
     concatenated_csv = pd.concat(
         [pd.read_csv(filename) for filename in filenames]
     )
-    concatenated_csv.to_csv("trades-df-2021_11_1_0_0_0-2021_12_21_0_0_0.csv")
+    concatenated_csv.to_csv("trades-df-2021_11_1_0_0_0-2021_12_21_0_0_0.csv", index=False)
     for filename in filenames:
         os.remove(filename)
 
