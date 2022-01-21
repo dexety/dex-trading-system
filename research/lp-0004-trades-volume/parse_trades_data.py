@@ -1,77 +1,121 @@
 import json
 import csv
+import sys
 from collections import deque
 from datetime import datetime, timedelta
-import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-def exp_moving_average(window, alpha = 0.5) -> float:
-    ema = float(window[0]["price"])
-    for i in range(1, len(window)):
-        ema = ema + alpha * (float(window[i]["price"]) - ema)
-    
-    return ema
+
+class Indicators:
+    @staticmethod
+    def get_all_indicators():
+        return {
+            "trade-volume": lambda window: Indicators.trade_volume(window),
+            "moving-average": lambda window: Indicators.moving_average(window),
+            "weighted-moving-average": (
+                lambda window: Indicators.weighted_moving_average(window)
+            ),
+            "exp-moving-average": (
+                lambda window: Indicators.exp_moving_average(window)
+            ),
+            "stochastic-oscillator": (
+                lambda window: Indicators.stochastic_oscillator(window)
+            ),
+        }
+
+    @staticmethod
+    def exp_moving_average(window, alpha=0.5) -> float:
+        if not window:
+            return 0
+        ema = float(window[0]["price"])
+        for i in range(1, len(window)):
+            ema = ema + alpha * (float(window[i]["price"]) - ema)
+        return ema
+
+    @staticmethod
+    def trade_volume(window) -> float:
+        if not window:
+            return 0
+        return sum(map(lambda trade: float(trade["size"]), window))
+
+    @staticmethod
+    def moving_average(window) -> float:
+        if not window:
+            return 0
+        return sum(map(lambda trade: float(trade["price"]), window)) / len(
+            window
+        )
+
+    @staticmethod
+    def weighted_moving_average(window) -> float:
+        if not window:
+            return 0
+        return (
+            sum(
+                map(
+                    lambda trade: float(trade["price"]) * float(trade["size"]),
+                    window,
+                )
+            )
+            / sum(map(lambda trade: float(trade["size"]), window))
+        )
+
+    @staticmethod
+    def stochastic_oscillator(window) -> float:
+        if not window:
+            return 0
+        return (
+            float(window[-1]["price"])
+            - float(
+                min(window, key=lambda trade: float(trade["price"]))["price"]
+            )
+        ) / (
+            max(
+                1,
+                float(
+                    max(window, key=lambda trade: float(trade["price"]))[
+                        "price"
+                    ]
+                )
+                - float(
+                    min(window, key=lambda trade: float(trade["price"]))[
+                        "price"
+                    ]
+                ),
+            )
+        )
+
 
 class DataParser:
     punch_threashold = 0.0001
     trades_window_sec = 60
     trades_window_timestamps_num = 10
     punch_window_sec = 30
-    punch_window_timestamps_num = 3
-    random_data_pc = 0.001
-    data_it = 0
-    indicator_functions = {
-        "trade-volume": (
-            lambda window: sum(map(lambda trade: float(trade["size"]), window))
-            if window
-            else 0
-        ),
-        "moving-average": (
-            lambda window: (
-                sum(map(lambda trade: float(trade["price"]), window))
-                / len(window)
-            )
-            if window
-            else 0
-        ),
-        "weighted-moving-average": (
-            lambda window: (
-                sum(map(lambda trade: float(trade["price"]) * float(trade["size"]), window))
-                / sum(map(lambda trade: float(trade["size"]), window))
-            )
-            if window
-            else 0
-        ),
-        "exp-moving-average": (
-            lambda window: exp_moving_average(window)     
-        ),
-        "stochastic-oscillator": (
-            lambda window: (
-                (
-                    float(window[-1]["price"])
-                    - float(min(window, key=lambda trade: float(trade["price"]))["price"])
-                )
-                / (
-                    max(1, float(max(window, key=lambda trade: float(trade["price"]))["price"])
-                    - float(min(window, key=lambda trade: float(trade["price"]))["price"]))
-                )
-            )
-            if window
-            else 0
-        ),
-    }
-    trades_window = {"BUY": deque(), "SELL": deque()}
-    punch_window = {"BUY": deque(), "SELL": deque()}
-    window_lengths = []
-    output_data = []
+    random_data_pc = 0.005
     SIDES = ["BUY", "SELL"]
 
-    def __init__(self, input_path: str, output_path: str) -> None:
+    indicator_functions = Indicators.get_all_indicators()
+
+    def __init__(
+        self,
+        input_path: str,
+        output_path: str,
+        current_thread_num: int,
+        max_thread_num: int,
+    ) -> None:
         self.data = json.load(open(input_path, "r", encoding="utf8"))
+        self.data_it = len(self.data) // max_thread_num * current_thread_num
+        self.data_it_max = (
+            len(self.data) // max_thread_num * (current_thread_num + 1)
+        )
         self.input_path = input_path
-        self.progress_bar = tqdm(range(len(self.data)))
         self.output_path = output_path
+        self.trades_window = {"BUY": deque(), "SELL": deque()}
+        self.punch_window = {"BUY": deque(), "SELL": deque()}
+        self.output_data = []
+        self.progress_bar = tqdm(range(self.data_it_max - self.data_it))
+
         self.init_windows()
 
     def init_windows(self) -> None:
@@ -95,7 +139,7 @@ class DataParser:
         return None
 
     def is_data_left(self) -> bool:
-        return self.data_it < len(self.data)
+        return self.data_it < self.data_it_max
 
     def get_max_item_from_window(self, window: dict) -> dict:
         if window["BUY"] and window["SELL"]:
@@ -208,14 +252,9 @@ class DataParser:
         self.update_punch_window()
         self.update_trades_window()
 
-    def run(self) -> None:
-        while self.data_it < len(self.data):
-            self.update_windows()
-            if len(self.punch_window) >= 2:
-                self.add_result()
-
     def add_result(self) -> None:
         update = dict()
+        max_punch = 0
 
         for side in self.SIDES:
             for window_sec in range(
@@ -256,13 +295,13 @@ class DataParser:
                         - float(
                             max(
                                 self.punch_window[side],
-                                key=lambda a: a["price"],
+                                key=lambda trade: trade["price"],
                             )["price"]
                         )
                         / float(
                             min(
                                 self.punch_window[side],
-                                key=lambda a: a["price"],
+                                key=lambda trade: trade["price"],
                             )["price"]
                         )
                     )
@@ -271,17 +310,15 @@ class DataParser:
                 if self.punch_window[side]
                 else 0
             )
+            max_punch = max(
+                max_punch,
+                update[
+                    "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
+                ],
+            )
 
         if (
-            max(
-                map(
-                    lambda elem: abs(elem[1]),
-                    dict(
-                        filter(lambda elem: "punch" in elem[0], update.items())
-                    ).items(),
-                )
-            )
-            > self.punch_threashold
+            max_punch > self.punch_threashold
             or np.random.random() < self.random_data_pc
         ):
             self.output_data.append(update)
@@ -295,17 +332,23 @@ class DataParser:
             writer.writeheader()
             writer.writerows(self.output_data)
 
+    def run_and_write(self) -> None:
+        while self.data_it < self.data_it_max:
+            self.update_windows()
+            if len(self.punch_window) >= 2:
+                self.add_result()
+        self.write_data()
+
 
 def main():
     input_path = (
         "../../data/trades/raw/trades-2021_11_1_0_0_0-2021_12_21_0_0_0.json"
     )
-    output_path = "trades-df-2021_11_1_0_0_0-2021_12_21_0_0_0.csv"
-    dp = DataParser(input_path, output_path)
-    dp.run()
-    dp.write_data()
-    df = pd.read_csv(output_path)
-    print(df)
+    output_path = (
+        f"trades-df-2021_11_1_0_0_0-2021_12_21_0_0_0-{sys.argv[1]}.csv"
+    )
+    dp = DataParser(input_path, output_path, int(sys.argv[1]), int(sys.argv[2]))
+    dp.run_and_write()
 
 
 if __name__ == "__main__":
