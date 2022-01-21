@@ -7,6 +7,7 @@ __pycache__
 .DS_Store
 data/
 *.json
+*.csv
 
 # lr-0002 brownie
 *__pycache__
