@@ -45,7 +45,9 @@ class DydxConnector:
     order_book = {}
     symbols_info = {}
     subscriptions = []
+
     orderbook_listeners = []
+    account_listeners = []
     trades_listeners = []
     num_of_connection_attempts = 50
 
@@ -121,6 +123,21 @@ class DydxConnector:
             positions = self.sync_client.private.get_positions(status=status)
         return positions
 
+    def get_historical_trades(self, symbol, start_dt, end_dt, debug_info=False):
+        trades = []
+        while end_dt > start_dt:
+            trades.extend(
+                self.sync_client.public.get_trades(symbol, end_dt)["trades"]
+            )
+            end_dt = datetime.strptime(
+                trades[-1]["createdAt"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+            if debug_info:
+                print(end_dt, "->", start_dt)
+
+        trades.reverse()
+        return trades
+
     @safe_execute
     def send_limit_order(
         self, *, symbol, side, price, quantity, cancel_id=None
@@ -170,14 +187,14 @@ class DydxConnector:
             ],
             market=symbol,
             side=side,
-            order_type=ORDER_TYPE_LIMIT,
+            order_type=ORDER_TYPE_MARKET,
             post_only=False,
             size=str(quantity),
             price=str(price),
             limit_fee="0.015",
-            time_in_force=TIME_IN_FORCE_IOC,
+            time_in_force=TIME_IN_FORCE_FOK,
             expiration_epoch_seconds=10613988637,
-            client_id=None if (not our_id) else str(our_id),
+            client_id=our_id,
         )
 
     @safe_execute
@@ -206,59 +223,6 @@ class DydxConnector:
     def cancel_all_orders(self, market) -> None:
         return self.sync_client.private.cancel_all_orders(market=market)
 
-    def add_orderbook_subscription(self, symbol: str) -> None:
-        self.subscriptions.append(
-            {
-                "type": "subscribe",
-                "channel": "v3_orderbook",
-                "id": symbol,
-                "includeOffsets": True,
-            }
-        )
-
-    @safe_execute
-    def get_historical_trades(
-        self, symbol: str, start_dt: datetime, end_dt: datetime
-    ):
-        diff_seconds = int((end_dt - start_dt).total_seconds())
-        period_end_dt = end_dt
-        period_start_dt = end_dt
-        progress_bar = tqdm(range(diff_seconds))
-        trades = []
-        while period_end_dt > start_dt:
-            trades.extend(
-                self.sync_client.public.get_trades(symbol, period_end_dt)[
-                    "trades"
-                ]
-            )
-            period_start_dt = datetime.strptime(
-                trades[-1]["createdAt"], "%Y-%m-%dT%H:%M:%S.%fZ"
-            )
-            progress_bar.update(
-                int((period_end_dt - period_start_dt).total_seconds())
-            )
-            period_end_dt = period_start_dt
-
-        trades.reverse()
-        return trades
-
-    def add_trade_subscription(self, symbol: str) -> None:
-        self.subscriptions.append(
-            {
-                "type": "subscribe",
-                "channel": "v3_trades",
-                "id": symbol,
-            }
-        )
-
-    def add_symbols_subscription(self):
-        self.subscriptions.append(
-            {
-                "type": "subscribe",
-                "channel": "v3_markets",
-            }
-        )
-
     async def subscribe_and_recieve(self) -> None:
         async with websockets.connect(WS_HOST_ROPSTEN) as websocket:
             for request in self.subscriptions:
@@ -280,32 +244,76 @@ class DydxConnector:
                                 trade["size"] = float(trade["size"])
                                 trade["recieveTime"] = now
                                 self._call_trade_listeners(trade)
+                    elif update["channel"] == "v3_accounts":
+                        self._call_account_listeners(update)
 
     def add_orderbook_listener(self, listener) -> None:
         self.orderbook_listeners.append(listener)
-        for symbol in self.symbols:
-            self.add_orderbook_subscription(symbol)
+
+    def add_account_listener(self, listener) -> None:
+        self.account_listeners.append(listener)
 
     def add_trade_listener(self, listener) -> None:
         self.trades_listeners.append(listener)
-        for symbol in self.symbols:
-            self.add_trade_subscription(symbol)
 
-    def _call_orderbook_listeners(self, orderbook_update) -> None:
-        symbol = orderbook_update["id"]
-        if orderbook_update["type"] == "subscribed":
+    def add_orderbook_subscription(self, symbol: str) -> None:
+        self.subscriptions.append(
+            {
+                "type": "subscribe",
+                "channel": "v3_orderbook",
+                "id": symbol,
+                "includeOffsets": True,
+            }
+        )
+
+    def add_account_subscription(self) -> None:
+        now_iso_string = generate_now_iso()
+        signature = self.get_client().private.sign(
+            request_path="/ws/accounts",
+            method="GET",
+            iso_timestamp=now_iso_string,
+            data={},
+        )
+        self.subscriptions.append(
+            {
+                "type": "subscribe",
+                "channel": "v3_accounts",
+                "accountNumber": "0",
+                "apiKey": self.get_client.api_key_credentials["key"],
+                "passphrase": self.get_client.api_key_credentials["passphrase"],
+                "timestamp": now_iso_string,
+                "signature": signature,
+            }
+        )
+
+    def add_trade_subscription(self, symbol: str) -> None:
+        self.subscriptions.append(
+            {
+                "type": "subscribe",
+                "channel": "v3_trades",
+                "id": symbol,
+            }
+        )
+
+    def _call_orderbook_listeners(self, update) -> None:
+        symbol = update["id"]
+        if update["type"] == "subscribed":
             is_first_request = True
-        elif orderbook_update["type"] == "channel_data":
+        elif update["type"] == "channel_data":
             is_first_request = False
         self.order_book[symbol].update_orders(
-            orderbook_update["contents"], is_first_request=is_first_request
+            update["contents"], is_first_request=is_first_request
         )
         for listener in self.orderbook_listeners:
-            listener(orderbook_update)
+            listener(update)
 
-    def _call_trade_listeners(self, trade_update) -> None:
+    def _call_account_listeners(self, update) -> None:
+        for listener in self.account_listeners:
+            listener(update)
+
+    def _call_trade_listeners(self, update) -> None:
         for listener in self.trades_listeners:
-            listener(trade_update)
+            listener(update)
 
     async def async_start(self) -> None:
         while True:
