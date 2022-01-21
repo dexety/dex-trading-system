@@ -18,10 +18,12 @@ symbol = args.symbol
 symbols = [symbol]
 
 file_index = 1
-while os.path.exists(f"../data/trades/trades_{symbol}_{str(file_index)}.json"):
+while os.path.exists(
+    f"../data/trades/raw/trades_{symbol}_{str(file_index)}.json"
+):
     file_index += 1
 
-DATA_PATH = f"../data/trades/trades_{symbol}_{str(file_index)}.json"
+DATA_PATH = f"../data/trades/raw/trades_{symbol}_{str(file_index)}.json"
 
 
 def on_trade_update(update):
