@@ -11,15 +11,15 @@ class Indicators:
     @staticmethod
     def get_all_indicators():
         return {
-            "trade-volume": lambda window: Indicators.trade_volume(window),
-            "moving-average": lambda window: Indicators.moving_average(window),
-            "weighted-moving-average": (
+            "trade_volume": lambda window: Indicators.trade_volume(window),
+            "moving_average_price": lambda window: Indicators.moving_average(window),
+            "weighted_moving_average_price": (
                 lambda window: Indicators.weighted_moving_average(window)
             ),
-            "exp-moving-average": (
+            "exp_moving_average_price": (
                 lambda window: Indicators.exp_moving_average(window)
             ),
-            "stochastic-oscillator": (
+            "stochastic_oscillator": (
                 lambda window: Indicators.stochastic_oscillator(window)
             ),
         }
