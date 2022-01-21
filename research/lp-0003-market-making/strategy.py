@@ -12,7 +12,7 @@ sys.path.append("../../")
 
 from connectors.dydx.connector import DydxConnector, safe_execute
 from connectors.dydx.order_book_cache import OrderBookCache
-from base.logger import Logger
+from utils.logger.logger import Logger
 
 
 def too_many_requests_guard(function):
