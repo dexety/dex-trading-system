@@ -276,7 +276,7 @@ class MarkerMaking:
 
 def main():
     mm = MarkerMaking(
-        "../../data/trades/trades-2021_11_1_0_0_0-2021_11_7_0_0_0.json"
+        "../../data/trades/raw/trades-2021_11_1_0_0_0-2021_11_7_0_0_0.json"
     )
     mm.run()
 

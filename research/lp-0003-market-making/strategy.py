@@ -257,7 +257,9 @@ class MarketMakingStrategy:
         average_price = sum(
             map(lambda position: float(position["entryPrice"]), positions)
         ) / len(positions)
-        Logger.debug(f"Size of opened positions: {total_size}, average price: {average_price}")
+        Logger.debug(
+            f"Size of opened positions: {total_size}, average price: {average_price}"
+        )
         self.set_null_open_orders()
         if total_size > 0:
             self.send_limit_order(
