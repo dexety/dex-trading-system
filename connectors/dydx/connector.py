@@ -163,7 +163,7 @@ class DydxConnector:
         )
 
     @safe_execute
-    def send_fok_order(self, *, symbol, side, price, quantity, our_id=None):
+    def send_fok_order(self, *, symbol: str, side: str, price: float, quantity: float, our_id=None):
         return self.sync_client.private.create_order(
             position_id=self.sync_client.private.get_account()["account"][
                 "positionId"
@@ -172,8 +172,8 @@ class DydxConnector:
             side=side,
             order_type=ORDER_TYPE_MARKET,
             post_only=False,
-            size=str(quantity),
-            price=str(price),
+            size=str(round(quantity, 3)),
+            price=str(round(price, 1)),
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_FOK,
             expiration_epoch_seconds=10613988637,
@@ -244,8 +244,8 @@ class DydxConnector:
                 "type": "subscribe",
                 "channel": "v3_accounts",
                 "accountNumber": "0",
-                "apiKey": self.get_client.api_key_credentials["key"],
-                "passphrase": self.get_client.api_key_credentials["passphrase"],
+                "apiKey": self.get_client().api_key_credentials["key"],
+                "passphrase": self.get_client().api_key_credentials["passphrase"],
                 "timestamp": now_iso_string,
                 "signature": signature,
             }
