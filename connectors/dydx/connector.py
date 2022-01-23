@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 import asyncio
 from typing import Callable
 from functools import wraps
@@ -178,20 +178,26 @@ class DydxConnector:
         )
 
     @safe_execute
-    def get_historical_trades(self, symbol: str, start_dt: datetime, end_dt: datetime):
-        diff_seconds = int((end_dt - start_dt).total_seconds())   
+    def get_historical_trades(
+        self, symbol: str, start_dt: datetime, end_dt: datetime
+    ):
+        diff_seconds = int((end_dt - start_dt).total_seconds())
         period_end_dt = end_dt
         period_start_dt = end_dt
         progress_bar = tqdm(range(diff_seconds))
         trades = []
         while period_end_dt > start_dt:
             trades.extend(
-                self.sync_client.public.get_trades(symbol, period_end_dt)["trades"]
+                self.sync_client.public.get_trades(symbol, period_end_dt)[
+                    "trades"
+                ]
             )
             period_start_dt = datetime.strptime(
                 trades[-1]["createdAt"], "%Y-%m-%dT%H:%M:%S.%fZ"
             )
-            progress_bar.update(int((period_end_dt - period_start_dt).total_seconds()))
+            progress_bar.update(
+                int((period_end_dt - period_start_dt).total_seconds())
+            )
             period_end_dt = period_start_dt
 
         trades.reverse()

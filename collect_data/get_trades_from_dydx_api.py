@@ -21,9 +21,7 @@ def get_trades_from_dydx_api(
         [symbol],
         INFURA_NODE,
     )
-    return dydx_connector_trades.get_historical_trades(
-        symbol, start_dt, end_dt
-    )
+    return dydx_connector_trades.get_historical_trades(symbol, start_dt, end_dt)
 
 
 def get_formated_dt(dt: datetime) -> str:
