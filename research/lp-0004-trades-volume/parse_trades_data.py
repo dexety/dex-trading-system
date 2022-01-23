@@ -108,7 +108,7 @@ class WindowIndicators:
 
 
 class DataParser:
-    punch_threashold = 0.0001
+    punch_threashold = 0.0005
     trades_window_slices_sec = [600, 60, 30, 10, 1]
     trades_window_sec = 600
     punch_window_sec = 30
@@ -270,6 +270,9 @@ class DataParser:
         self.update_trades_window()
 
     def add_result(self) -> None:
+        if not self.trades_window['BUY'] or not self.trades_window['SELL']:
+            return
+
         update = dict()
         max_punch = 0
 
@@ -319,30 +322,35 @@ class DataParser:
                         indicator_name
                     ](window_slice)
 
-            update[
-                "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
-            ] = (
-                (
-                    (
-                        1
-                        - float(
-                            max(
-                                self.punch_window[side],
-                                key=lambda trade: trade["price"],
-                            )["price"]
-                        )
-                        / float(
-                            min(
-                                self.punch_window[side],
-                                key=lambda trade: trade["price"],
-                            )["price"]
-                        )
-                    )
-                    * (1 if side == "SELL" else -1)
+            if not self.punch_window[side]:
+                update[
+                    "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
+                ] = 0
+            elif side == "SELL":
+                update[
+                    "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
+                ] = max(
+                    0,
+                    1
+                    - float(max(
+                        self.punch_window["SELL"],
+                        key=lambda trade: trade["price"],
+                    )["price"])
+                    / float(self.trades_window["BUY"][-1]["price"]),
                 )
-                if self.punch_window[side]
-                else 0
-            )
+            elif side == "BUY":
+                update[
+                    "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
+                ] = -max(
+                    0,
+                    1
+                    - float(self.trades_window["SELL"][-1]["price"])
+                    / float(min(
+                        self.punch_window["BUY"],
+                        key=lambda trade: trade["price"],
+                    )["price"]),
+                )
+
             max_punch = max(
                 max_punch,
                 update[
@@ -354,6 +362,9 @@ class DataParser:
             max_punch > self.punch_threashold
             or np.random.random() < self.random_data_pc
         ):
+            current_trade_dt = self.get_datetime(
+                self.data[self.data_it]["createdAt"]
+            )
             self.output_data.append(update)
             # self.reset_windows()
             # self.init_windows()
