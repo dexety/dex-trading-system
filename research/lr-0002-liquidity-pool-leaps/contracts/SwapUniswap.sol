@@ -29,7 +29,7 @@ contract SwapExamples {
 
     // For this example, we will set the pool fee to 0.3%.
     uint24 public poolFee = 3000;
-
+    
     constructor(ISwapRouter _swapRouter) {
         swapRouter = _swapRouter;
     }
@@ -41,7 +41,7 @@ contract SwapExamples {
         );
         poolFee = _poolFee;
     }
-
+    
     /// @notice swapExactInputSingle swaps a fixed amount of DAI for a maximum possible amount of WETH9
     /// using the DAI/WETH9 0.3% pool by calling `exactInputSingle` in the swap router.
     /// @dev The calling address must approve this contract to spend at least `amountIn` worth of its DAI for this function to succeed.

@@ -3,13 +3,12 @@ venv
 *.log
 __pycache__
 *.sqlite3
-*.ipynb
 .DS_Store
 data/
 *.json
+*.csv
 
-# lr-0002 brownie
-*__pycache__
+# brownie
 *.history
 *.hypothesis/
 *build/
