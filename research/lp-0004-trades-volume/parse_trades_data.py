@@ -55,6 +55,8 @@ class WindowIndicators:
 
     @staticmethod
     def open_close_diff(window) -> float:
+        if not window:
+            return 0
         return float(window[-1]["price"]) - float(window[0]["price"])
 
     @staticmethod
@@ -372,10 +374,10 @@ class DataParser:
 
 def main():
     input_path = (
-        "../../data/trades/raw/trades-2021_11_1_0_0_0-2021_12_21_0_0_0.json"
+        "../../data/trades/raw/trades-2021_8_1_0_0_0-2022_1_22_0_0_0.json"
     )
     output_path = (
-        f"trades-df-2021_11_1_0_0_0-2021_12_21_0_0_0-{sys.argv[1]}.csv"
+        f"trades-df-2021_8_1_0_0_0-2022_1_22_0_0_0-{sys.argv[1]}.csv"
     )
     dp = DataParser(input_path, output_path, int(sys.argv[1]), int(sys.argv[2]))
     dp.run_and_write()
