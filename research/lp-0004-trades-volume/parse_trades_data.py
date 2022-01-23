@@ -112,7 +112,6 @@ class DataParser:
     punch_window_sec = 30
     random_data_pc = 0.005
     SIDES = ["BUY", "SELL"]
-
     indicator_functions = WindowIndicators.get_all_indicators()
 
     def __init__(
