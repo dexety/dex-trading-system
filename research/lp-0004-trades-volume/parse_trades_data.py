@@ -197,13 +197,14 @@ class DataParser:
             return self.get_datetime(trade["createdAt"])
         return None
 
-    def non_empty_window(self, window: dict) -> bool:
-        return self.get_max_item_time_from_window(
-            window
-        ) or self.get_max_item_time_from_window(window)
+    def is_window_empty(self, window: dict) -> bool:
+        return not (
+            self.get_max_item_time_from_window(window)
+            or self.get_max_item_time_from_window(window)
+        )
 
     def set_trades_window(self) -> None:
-        while not self.non_empty_window(
+        while self.is_window_empty(
             self.trades_window
         ) or self.get_max_item_time_from_window(
             self.trades_window
@@ -218,7 +219,7 @@ class DataParser:
             self.trades_window[new_trade["side"]].append(new_trade)
 
     def set_punch_window(self) -> None:
-        while not self.non_empty_window(
+        while self.is_window_empty(
             self.punch_window
         ) or self.get_max_item_time_from_window(
             self.punch_window
@@ -241,7 +242,7 @@ class DataParser:
                 self.get_min_item_from_window(self.punch_window)["side"]
             ].popleft()
         while self.data_it < self.data_it_max and (
-            not self.non_empty_window(self.punch_window)
+            self.is_window_empty(self.punch_window)
             or (
                 self.get_max_item_time_from_window(self.punch_window)
                 - self.get_min_item_time_from_window(self.punch_window)
@@ -354,8 +355,8 @@ class DataParser:
             or np.random.random() < self.random_data_pc
         ):
             self.output_data.append(update)
-            self.reset_windows()
-            self.init_windows()
+            # self.reset_windows()
+            # self.init_windows()
 
     def write_data(self) -> None:
         field_names = list(self.output_data[0].keys())
@@ -373,12 +374,12 @@ class DataParser:
 
 
 def main():
+    if len(sys.argv) != 3:
+        raise Exception("missed min-max data it")
     input_path = (
         "../../data/trades/raw/trades-2021_8_1_0_0_0-2022_1_22_0_0_0.json"
     )
-    output_path = (
-        f"trades-df-2021_8_1_0_0_0-2022_1_22_0_0_0-{sys.argv[1]}.csv"
-    )
+    output_path = f"trades-df-2021_8_1_0_0_0-2022_1_22_0_0_0-{sys.argv[1]}.csv"
     dp = DataParser(input_path, output_path, int(sys.argv[1]), int(sys.argv[2]))
     dp.run_and_write()
 
