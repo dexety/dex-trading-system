@@ -390,7 +390,12 @@ class DataParser:
                 self.data[self.data_it]["createdAt"]
             )
             self.output_data.append(update)
+<<<<<<< HEAD
             self.reset_windows_after_punch()
+=======
+            # self.reset_windows()
+            # self.init_windows()
+>>>>>>> ae5906f (remove reset window after every update)
 
     def write_data(self) -> None:
         field_names = list(self.output_data[0].keys())
