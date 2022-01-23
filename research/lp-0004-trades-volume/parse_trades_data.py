@@ -7,20 +7,30 @@ import numpy as np
 from tqdm import tqdm
 
 
-class Indicators:
+class WindowIndicators:
     @staticmethod
     def get_all_indicators():
         return {
-            "trade-volume": lambda window: Indicators.trade_volume(window),
-            "moving-average": lambda window: Indicators.moving_average(window),
+            "trade-amount": lambda window: WindowIndicators.trade_amount(
+                window
+            ),
+            "trade-volume": lambda window: WindowIndicators.trade_volume(
+                window
+            ),
+            "open-close-diff": lambda window: WindowIndicators.open_close_diff(
+                window
+            ),
+            "moving-average": lambda window: WindowIndicators.moving_average(
+                window
+            ),
             "weighted-moving-average": (
-                lambda window: Indicators.weighted_moving_average(window)
+                lambda window: WindowIndicators.weighted_moving_average(window)
             ),
             "exp-moving-average": (
-                lambda window: Indicators.exp_moving_average(window)
+                lambda window: WindowIndicators.exp_moving_average(window)
             ),
             "stochastic-oscillator": (
-                lambda window: Indicators.stochastic_oscillator(window)
+                lambda window: WindowIndicators.stochastic_oscillator(window)
             ),
         }
 
@@ -34,10 +44,18 @@ class Indicators:
         return ema
 
     @staticmethod
+    def trade_amount(window) -> float:
+        return len(window)
+
+    @staticmethod
     def trade_volume(window) -> float:
         if not window:
             return 0
         return sum(map(lambda trade: float(trade["size"]), window))
+
+    @staticmethod
+    def open_close_diff(window) -> float:
+        return float(window[-1]["price"]) - float(window[0]["price"])
 
     @staticmethod
     def moving_average(window) -> float:
@@ -89,13 +107,13 @@ class Indicators:
 
 class DataParser:
     punch_threashold = 0.0001
-    trades_window_sec = 60
-    trades_window_timestamps_num = 10
+    trades_window_slices_sec = [600, 60, 30, 10, 1]
+    trades_window_sec = 600
     punch_window_sec = 30
     random_data_pc = 0.005
     SIDES = ["BUY", "SELL"]
 
-    indicator_functions = Indicators.get_all_indicators()
+    indicator_functions = WindowIndicators.get_all_indicators()
 
     def __init__(
         self,
@@ -132,14 +150,11 @@ class DataParser:
 
     def get_new_trade(self) -> dict:
         self.progress_bar.update()
-        if self.is_data_left():
+        if self.data_it < self.data_it_max:
             trade = self.data[self.data_it]
             self.data_it += 1
             return trade
         return None
-
-    def is_data_left(self) -> bool:
-        return self.data_it < self.data_it_max
 
     def get_max_item_from_window(self, window: dict) -> dict:
         if window["BUY"] and window["SELL"]:
@@ -224,7 +239,7 @@ class DataParser:
             self.punch_window[
                 self.get_min_item_from_window(self.punch_window)["side"]
             ].popleft()
-        while self.is_data_left() and (
+        while self.data_it < self.data_it_max and (
             not self.non_empty_window(self.punch_window)
             or (
                 self.get_max_item_time_from_window(self.punch_window)
@@ -256,19 +271,35 @@ class DataParser:
         update = dict()
         max_punch = 0
 
+        current_trade_dt = self.get_datetime(
+            self.data[self.data_it]["createdAt"]
+        )
+        midnight = current_trade_dt.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        update["seconds-since-midnight"] = (current_trade_dt - midnight).seconds
+
         for side in self.SIDES:
-            for window_sec in range(
-                self.trades_window_sec // self.trades_window_timestamps_num,
-                self.trades_window_sec + 1,
-                self.trades_window_sec // self.trades_window_timestamps_num,
-            ):
+            for n_trades_ago in [1, 10, 50, 100, 1000]:
+                diff = (
+                    self.get_datetime(self.data[self.data_it]["createdAt"])
+                    - self.get_datetime(
+                        self.data[max(0, self.data_it - n_trades_ago)][
+                            "createdAt"
+                        ]
+                    )
+                ).total_seconds()
+                update[
+                    "seconds-since-" + str(n_trades_ago) + "-trades-ago-" + side
+                ] = diff
+            for window_slice_sec in self.trades_window_slices_sec:
                 window_slice = list(
                     filter(
                         lambda trade: self.get_datetime(
                             self.trades_window[side][-1]["createdAt"]
                         )
                         - self.get_datetime(trade["createdAt"])
-                        <= timedelta(seconds=window_sec),
+                        <= timedelta(seconds=window_slice_sec),
                         self.trades_window[side],
                     )
                 )
@@ -279,7 +310,7 @@ class DataParser:
                         + "-"
                         + side
                         + "-"
-                        + str(window_sec)
+                        + str(window_slice_sec)
                         + "-sec"
                     )
                     update[column_name] = self.indicator_functions[

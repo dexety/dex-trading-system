@@ -12,3 +12,4 @@ data/
 *build/
 *reports/
 *.env
+*catboost_info
