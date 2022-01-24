@@ -57,7 +57,7 @@ class WindowIndicators:
     def open_close_diff(window) -> float:
         if not window:
             return 0
-        return float(window[-1]["price"]) - float(window[0]["price"])
+        return float(window[-1]["price"]) / float(window[0]["price"])
 
     @staticmethod
     def moving_average(window) -> float:
@@ -108,7 +108,7 @@ class WindowIndicators:
 
 
 class DataParser:
-    punch_threashold = 0.0005
+    punch_threashold = 0.0002
     trades_window_slices_sec = [600, 60, 30, 10, 1]
     trades_window_sec = 600
     punch_window_sec = 30
