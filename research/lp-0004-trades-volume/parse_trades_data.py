@@ -142,8 +142,13 @@ class DataParser:
         self.set_punch_window()
 
     def reset_windows(self) -> None:
-        self.trades_window = {"BUY": deque(), "SELL": deque()}
-        self.punch_window = {"BUY": deque(), "SELL": deque()}
+        punch_windown_head_time = self.get_min_item_time_from_window(
+            self.punch_window
+        )
+        while self.get_min_item_time_from_window(
+            self.punch_window
+        ) - punch_windown_head_time < timedelta(seconds=self.punch_window_sec):
+            self.update_punch_window()
 
     @staticmethod
     def get_datetime(string_time: str) -> datetime:
@@ -270,9 +275,9 @@ class DataParser:
         self.update_trades_window()
 
     def add_result(self) -> None:
-        if not self.trades_window['BUY'] or not self.trades_window['SELL']:
+        if not self.trades_window["BUY"] or not self.trades_window["SELL"]:
             return
-        
+
         update = dict()
         max_punch = 0
 
@@ -287,10 +292,12 @@ class DataParser:
                 ] = max(
                     0,
                     1
-                    - float(max(
-                        self.punch_window["SELL"],
-                        key=lambda trade: trade["price"],
-                    )["price"])
+                    - float(
+                        max(
+                            self.punch_window["SELL"],
+                            key=lambda trade: trade["price"],
+                        )["price"]
+                    )
                     / float(self.trades_window["BUY"][-1]["price"]),
                 )
             elif side == "BUY":
@@ -300,10 +307,12 @@ class DataParser:
                     0,
                     1
                     - float(self.trades_window["SELL"][-1]["price"])
-                    / float(min(
-                        self.punch_window["BUY"],
-                        key=lambda trade: trade["price"],
-                    )["price"]),
+                    / float(
+                        min(
+                            self.punch_window["BUY"],
+                            key=lambda trade: trade["price"],
+                        )["price"]
+                    ),
                 )
 
             max_punch = max(
@@ -324,7 +333,9 @@ class DataParser:
             midnight = current_trade_dt.replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
-            update["seconds-since-midnight"] = (current_trade_dt - midnight).seconds
+            update["seconds-since-midnight"] = (
+                current_trade_dt - midnight
+            ).seconds
 
             for side in self.SIDES:
                 for n_trades_ago in [1, 10, 50, 100, 1000]:
@@ -337,7 +348,10 @@ class DataParser:
                         )
                     ).total_seconds()
                     update[
-                        "seconds-since-" + str(n_trades_ago) + "-trades-ago-" + side
+                        "seconds-since-"
+                        + str(n_trades_ago)
+                        + "-trades-ago-"
+                        + side
                     ] = diff
                 for window_slice_sec in self.trades_window_slices_sec:
                     window_slice = list(
@@ -369,7 +383,6 @@ class DataParser:
             )
             self.output_data.append(update)
             self.reset_windows()
-            self.init_windows()
 
     def write_data(self) -> None:
         field_names = list(self.output_data[0].keys())
