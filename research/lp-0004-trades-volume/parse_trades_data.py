@@ -348,6 +348,8 @@ class DataParser:
                 - self.get_min_price(self.punch_window, "BUY")
                 / float(self.trades_window["SELL"][-1]["price"]),
             )
+        else:
+            update["punch-" + side + "-" + str(self.punch_window_sec) + "-sec"] = 0
 
     def add_result(self) -> None:
         if not self.trades_window["BUY"] or not self.trades_window["SELL"]:
