@@ -286,7 +286,7 @@ class DataParser:
         if not self.trades_window["BUY"] or not self.trades_window["SELL"]:
             return
 
-        update = dict()
+        update = {}
         max_punch = 0
 
         current_trade_dt = self.get_datetime(
@@ -385,7 +385,6 @@ class DataParser:
             abs(max_punch) > self.punch_threashold
             or np.random.random() < self.random_data_pc
         ):
-
             current_trade_dt = self.get_datetime(
                 self.data[self.data_it]["createdAt"]
             )
@@ -396,46 +395,7 @@ class DataParser:
                 current_trade_dt - midnight
             ).seconds
 
-            for side in self.SIDES:
-                for n_trades_ago in [1, 10, 50, 100, 1000]:
-                    diff = (
-                        self.get_datetime(self.data[self.data_it]["createdAt"])
-                        - self.get_datetime(
-                            self.data[max(0, self.data_it - n_trades_ago)][
-                                "createdAt"
-                            ]
-                        )
-                    ).total_seconds()
-                    update[
-                        "seconds-since-"
-                        + str(n_trades_ago)
-                        + "-trades-ago-"
-                        + side
-                    ] = diff
-                for window_slice_sec in self.trades_window_slices_sec:
-                    window_slice = list(
-                        filter(
-                            lambda trade: self.get_datetime(
-                                self.trades_window[side][-1]["createdAt"]
-                            )
-                            - self.get_datetime(trade["createdAt"])
-                            <= timedelta(seconds=window_slice_sec),
-                            self.trades_window[side],
-                        )
-                    )
-
-                    for indicator_name in self.indicator_functions:
-                        column_name = (
-                            indicator_name
-                            + "-"
-                            + side
-                            + "-"
-                            + str(window_slice_sec)
-                            + "-sec"
-                        )
-                        update[column_name] = self.indicator_functions[
-                            indicator_name
-                        ](window_slice)
+            self.calculate_indicators(update)
 
             current_trade_dt = self.get_datetime(
                 self.data[self.data_it]["createdAt"]
