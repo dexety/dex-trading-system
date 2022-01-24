@@ -109,7 +109,7 @@ class WindowIndicators:
 
 class DataParser:
     punch_threashold = 0.0002
-    trades_window_slices_sec = [600, 60, 30, 10, 1]
+    trades_window_slices_sec = [600, 60, 30, 10, 5, 1]
     trades_window_sec = 600
     punch_window_sec = 30
     random_data_pc = 0.005
