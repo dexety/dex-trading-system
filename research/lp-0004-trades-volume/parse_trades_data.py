@@ -108,13 +108,8 @@ class WindowIndicators:
 
 
 class DataParser:
-<<<<<<< HEAD
     punch_threashold = 0.0002
     trades_window_slices_sec = [600, 60, 30, 10, 5, 1]
-=======
-    punch_threashold = 0.0005
-    trades_window_slices_sec = [600, 60, 30, 10, 1]
->>>>>>> 6e99951 (improve punch calculation)
     trades_window_sec = 600
     punch_window_sec = 30
     random_data_pc = 0.005
@@ -279,24 +274,23 @@ class DataParser:
         self.update_punch_window()
         self.update_trades_window()
 
-<<<<<<< HEAD
     def get_max_price(self, window: dict, side: str) -> float:
         return float(
             max(
                 window[side],
                 key=lambda trade: trade["price"],
             )["price"]
-=======
+        )
+
     def add_result(self) -> None:
         if not self.trades_window['BUY'] or not self.trades_window['SELL']:
             return
-
+        
         update = dict()
         max_punch = 0
 
         current_trade_dt = self.get_datetime(
             self.data[self.data_it]["createdAt"]
->>>>>>> 6e99951 (improve punch calculation)
         )
 
     def get_min_price(self, window: dict, side: str) -> float:
@@ -346,7 +340,6 @@ class DataParser:
                         indicator_name
                     ](window_slice)
 
-<<<<<<< HEAD
     def calculate_punches(self, update, side) -> None:
         if side == "BUY" and self.punch_window["SELL"]:
             update[
@@ -380,37 +373,6 @@ class DataParser:
 
         for side in self.SIDES:
             self.calculate_punches(update, side)
-=======
-            if not self.punch_window[side]:
-                update[
-                    "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
-                ] = 0
-            elif side == "SELL":
-                update[
-                    "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
-                ] = max(
-                    0,
-                    1
-                    - float(max(
-                        self.punch_window["SELL"],
-                        key=lambda trade: trade["price"],
-                    )["price"])
-                    / float(self.trades_window["BUY"][-1]["price"]),
-                )
-            elif side == "BUY":
-                update[
-                    "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
-                ] = -max(
-                    0,
-                    1
-                    - float(self.trades_window["SELL"][-1]["price"])
-                    / float(min(
-                        self.punch_window["BUY"],
-                        key=lambda trade: trade["price"],
-                    )["price"]),
-                )
-
->>>>>>> 6e99951 (improve punch calculation)
             max_punch = max(
                 max_punch,
                 update[
@@ -423,6 +385,53 @@ class DataParser:
             abs(max_punch) > self.punch_threashold
             or np.random.random() < self.random_data_pc
         ):
+
+            current_trade_dt = self.get_datetime(
+                self.data[self.data_it]["createdAt"]
+            )
+            midnight = current_trade_dt.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            update["seconds-since-midnight"] = (current_trade_dt - midnight).seconds
+
+            for side in self.SIDES:
+                for n_trades_ago in [1, 10, 50, 100, 1000]:
+                    diff = (
+                        self.get_datetime(self.data[self.data_it]["createdAt"])
+                        - self.get_datetime(
+                            self.data[max(0, self.data_it - n_trades_ago)][
+                                "createdAt"
+                            ]
+                        )
+                    ).total_seconds()
+                    update[
+                        "seconds-since-" + str(n_trades_ago) + "-trades-ago-" + side
+                    ] = diff
+                for window_slice_sec in self.trades_window_slices_sec:
+                    window_slice = list(
+                        filter(
+                            lambda trade: self.get_datetime(
+                                self.trades_window[side][-1]["createdAt"]
+                            )
+                            - self.get_datetime(trade["createdAt"])
+                            <= timedelta(seconds=window_slice_sec),
+                            self.trades_window[side],
+                        )
+                    )
+
+                    for indicator_name in self.indicator_functions:
+                        column_name = (
+                            indicator_name
+                            + "-"
+                            + side
+                            + "-"
+                            + str(window_slice_sec)
+                            + "-sec"
+                        )
+                        update[column_name] = self.indicator_functions[
+                            indicator_name
+                        ](window_slice)
+
             current_trade_dt = self.get_datetime(
                 self.data[self.data_it]["createdAt"]
             )
