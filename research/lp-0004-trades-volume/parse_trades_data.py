@@ -283,9 +283,9 @@ class DataParser:
         )
 
     def add_result(self) -> None:
-        if not self.trades_window['BUY'] or not self.trades_window['SELL']:
+        if not self.trades_window["BUY"] or not self.trades_window["SELL"]:
             return
-        
+
         update = dict()
         max_punch = 0
 
@@ -392,7 +392,9 @@ class DataParser:
             midnight = current_trade_dt.replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
-            update["seconds-since-midnight"] = (current_trade_dt - midnight).seconds
+            update["seconds-since-midnight"] = (
+                current_trade_dt - midnight
+            ).seconds
 
             for side in self.SIDES:
                 for n_trades_ago in [1, 10, 50, 100, 1000]:
@@ -405,7 +407,10 @@ class DataParser:
                         )
                     ).total_seconds()
                     update[
-                        "seconds-since-" + str(n_trades_ago) + "-trades-ago-" + side
+                        "seconds-since-"
+                        + str(n_trades_ago)
+                        + "-trades-ago-"
+                        + side
                     ] = diff
                 for window_slice_sec in self.trades_window_slices_sec:
                     window_slice = list(
