@@ -1,273 +1,320 @@
-# -*- coding: utf-8 -*-
-
 import pandas as pd
 import numpy as np
 from catboost import CatBoostClassifier, Pool, metrics, cv
 from sklearn.metrics import accuracy_score
 import random
+import sys
 
-csv_path = (
-    "../../data/trades/precessed/trades-df-2021_8_1_0_0_0-2022_1_22_0_0_0.csv"
-)
-df = pd.read_csv(csv_path)
-x_columns = list(filter(lambda column: not "punch" in column, df.columns))
-y_columns = list(filter(lambda column: "punch" in column, df.columns))
+sys.path.append("../../")
 
-commision = 0.0005
-punch = commision * 4
-
-df["target"] = df[y_columns].apply(
-    lambda row: 1
-    if max(list(row.to_numpy()), key=abs) > punch
-    else -1
-    if max(list(row.to_numpy()), key=abs) < -punch
-    else 0,
-    axis=1,
-)
-df = df.drop(y_columns, axis=1)
-
-lines_to_drop = []
-
-for index, line in df.iterrows():
-    if np.random.rand() < 0.9 and line["target"] == 0:
-        lines_to_drop.append(index)
-
-df = df.drop(lines_to_drop)
-
-X = df[x_columns]
-y = df["target"]
-
-print(y.value_counts())
-
-buckets_num = 50
-buckets = [
-    df[len(df) // buckets_num * i : len(df) // buckets_num * (i + 1)]
-    for i in range(buckets_num)
-]
-random.shuffle(buckets)
-df_train = pd.concat(buckets[: int(buckets_num * 0.75)], ignore_index=True)
-df_validate = pd.concat(
-    buckets[int(buckets_num * 0.75) : int(buckets_num * 0.90)],
-    ignore_index=True,
-)
-df_test = pd.concat(buckets[int(buckets_num * 0.90) :], ignore_index=True)
-
-X_train = df_train[x_columns]
-y_train = df_train["target"]
-
-X_validation = df_validate[x_columns]
-y_validation = df_validate["target"]
-
-X_test = df_test[x_columns]
-y_test = df_test["target"]
-
-params = {
-    "iterations": 1000,
-    "l2_leaf_reg": 2,
-    "learning_rate": 0.2,
-    "custom_loss": [metrics.Accuracy()],
-    "eval_metric": metrics.Accuracy(),
-    "random_seed": 42,
-    "depth": 5,
-    "logging_level": "Silent",
-    "loss_function": "MultiClass",
-}
-train_pool = Pool(X_train, y_train)
-validate_pool = Pool(X_validation, y_validation)
-
-model = CatBoostClassifier(**params)
-model.fit(
-    train_pool,
-    eval_set=validate_pool,
-    plot=True,
-)
-model.save_model("catboost_model.dump")
-
-print(
-    "Model validation accuracy: {:.4}".format(
-        accuracy_score(y_test, model.predict(X_test))
-    )
-)
-predictions = model.predict(X_test)
-predictions = predictions.reshape(predictions.shape[0], 1)
-predictions_probs = model.predict_proba(X_test)
-print(predictions[90:100])
-print(predictions_probs[90:100])
-print(y_test[90:100])
-feature_importances = model.get_feature_importance(train_pool)
-feature_names = X_train.columns
-for score, name in sorted(
-    zip(feature_importances, feature_names), reverse=True
-):
-    print("{}: {}".format(name, score))
+from utils.logger.logger import Logger
 
 
-def calculate_profit(prob_threshold, diff_threshold, null_threshold):
-    p = f(prob_threshold, diff_threshold, null_threshold)
-    result = {
-        "correct_predictions": 0,
-        "false_positive": 0,
-        "false_negative": 0,
-        "wrong_side": 0,
-    }
-    for i in range(len(p)):
-        t = int(y_test[i : i + 1])
-        if p[i] == t != 0:
-            result["correct_predictions"] += 1
-        elif p[i] != t and t != 0 and p[i] != 0:
-            result["wrong_side"] += 1
-        elif p[i] != 0 and t == 0:
-            result["false_positive"] += 1
-        elif p[i] == 0 and t != 0:
-            result["false_negative"] += 1
+class TrainModel:
+    commision = 0.0005
+    punch = commision * 4
+    buckets_num = 200
 
-    result["correct_predictions_pc"] = result["correct_predictions"] / len(
-        y_test
-    )
-    result["false_positive_pc"] = result["false_positive"] / len(y_test)
-    result["false_negative_pc"] = result["false_negative"] / len(y_test)
-    result["wrong_side_pc"] = result["wrong_side"] / len(y_test)
+    def __init__(self, data_path: str) -> None:
+        self.data_path = data_path
+        self.read_data()
+        self.decrease_null_numbers()
+        self.split_data_to_train_validation_test()
 
-    return (
-        len(y) * result["correct_predictions_pc"] * (punch - 2 * commision)
-        - len(y) * result["false_positive_pc"] * 2 * commision
-        - len(y) * result["wrong_side_pc"] * (punch + 2 * commision)
-    )
+    def read_data(self) -> None:
+        Logger.debug("Reading data")
+        self.df = pd.read_csv(self.data_path)
+        Logger.debug("Prepare data")
+        self.x_columns = list(
+            filter(lambda column: not "punch" in column, self.df.columns)
+        )
+        self.y_columns = list(
+            filter(lambda column: "punch" in column, self.df.columns)
+        )
+        self.df["target"] = self.df[self.y_columns].apply(
+            lambda row: 1
+            if max(list(row.to_numpy()), key=abs) > self.punch
+            else -1
+            if max(list(row.to_numpy()), key=abs) < -self.punch
+            else 0,
+            axis=1,
+        )
+        self.df = self.df.drop(self.y_columns, axis=1)
 
+    def decrease_null_numbers(self) -> None:
+        lines_to_drop = []
 
-results = []
+        for index, line in self.df.iterrows():
+            if np.random.rand() < 0.9 and line["target"] == 0:
+                lines_to_drop.append(index)
 
+        self.df = self.df.drop(lines_to_drop)
+        self.X = self.df[self.x_columns]
+        self.y = self.df["target"]
 
-def f(prob_threshold, diff_threshold, null_threshold):
-    p = np.array(
-        (
-            list(
-                map(
-                    lambda row: 1 if row[2] > prob_threshold
-                    # and row[2] == max(row)
-                    and row[2] > row[0]
-                    and row[1] < null_threshold
-                    and abs(row[2] - row[0]) > diff_threshold
-                    and abs(row[2] - row[1]) > diff_threshold
-                    else -1
-                    if row[0] > prob_threshold
-                    # and row[0] == max(row)
-                    and row[0] > row[2]
-                    and row[1] < null_threshold
-                    and abs(row[0] - row[2]) > diff_threshold
-                    and abs(row[0] - row[1]) > diff_threshold
-                    else 0,
-                    predictions_probs,
+    def split_data_to_train_validation_test(self) -> None:
+        Logger.debug("Split data to train, validation and test")
+        buckets = [
+            self.df[
+                len(self.df)
+                // self.buckets_num
+                * i : len(self.df)
+                // self.buckets_num
+                * (i + 1)
+            ]
+            for i in range(self.buckets_num)
+        ]
+        random.shuffle(buckets)
+        df_train = pd.concat(
+            buckets[: int(self.buckets_num * 0.70)], ignore_index=True
+        )
+        df_validate = pd.concat(
+            buckets[
+                int(self.buckets_num * 0.70) : int(self.buckets_num * 0.85)
+            ],
+            ignore_index=True,
+        )
+        df_test = pd.concat(
+            buckets[int(self.buckets_num * 0.85) :], ignore_index=True
+        )
+
+        self.X_train = df_train[self.x_columns]
+        self.y_train = df_train["target"]
+
+        self.X_validation = df_validate[self.x_columns]
+        self.y_validation = df_validate["target"]
+
+        self.X_test = df_test[self.x_columns]
+        self.y_test = df_test["target"]
+
+    def train(self) -> None:
+        Logger.debug("Start model training")
+        params = {
+            "iterations": 1500,
+            "l2_leaf_reg": 2,
+            "learning_rate": 0.2,
+            "custom_loss": [metrics.Accuracy()],
+            "eval_metric": metrics.Accuracy(),
+            "random_seed": 42,
+            "depth": 5,
+            "logging_level": "Silent",
+            "loss_function": "MultiClass",
+        }
+        train_pool = Pool(self.X_train, self.y_train)
+        validate_pool = Pool(self.X_validation, self.y_validation)
+
+        self.model = CatBoostClassifier(**params)
+        self.model.fit(
+            train_pool,
+            eval_set=validate_pool,
+            plot=False,
+        )
+        self.model.save_model("catboost_model.dump")
+        self.predictions_probs = self.model.predict_proba(self.X_test)
+
+        Logger.debug(
+            "Model validation accuracy: {:.4}".format(
+                accuracy_score(self.y_test, self.model.predict(self.X_test))
+            )
+        )
+
+    def _get_predictions(
+        self,
+        prob_threshold: float,
+        diff_threshold: float,
+        null_threshold: float,
+    ) -> np.ndarray:
+        return np.array(
+            (
+                list(
+                    map(
+                        lambda row: 1
+                        if row[2] > prob_threshold
+                        and row[2] > row[0]
+                        and row[1] < null_threshold
+                        and abs(row[2] - row[0]) > diff_threshold
+                        and abs(row[2] - row[1]) > diff_threshold
+                        else -1
+                        if row[0] > prob_threshold
+                        and row[0] > row[2]
+                        and row[1] < null_threshold
+                        and abs(row[0] - row[2]) > diff_threshold
+                        and abs(row[0] - row[1]) > diff_threshold
+                        else 0,
+                        self.predictions_probs,
+                    )
                 )
             )
         )
+
+    def _get_predictions_quality(
+        self,
+        prob_threshold: float,
+        diff_threshold: float,
+        null_threshold: float,
+    ) -> None:
+        predictions = self._get_predictions(
+            prob_threshold, diff_threshold, null_threshold
+        )
+        quality = {
+            "correct_predictions": 0,
+            "false_positive": 0,
+            "false_negative": 0,
+            "wrong_side": 0,
+        }
+        for i in range(len(predictions)):
+            answer = int(self.y_test[i : i + 1])
+            if predictions[i] == answer != 0:
+                quality["correct_predictions"] += 1
+            elif (
+                predictions[i] != answer and answer != 0 and predictions[i] != 0
+            ):
+                quality["wrong_side"] += 1
+            elif predictions[i] != 0 and answer == 0:
+                quality["false_positive"] += 1
+            elif predictions[i] == 0 and answer != 0:
+                quality["false_negative"] += 1
+
+        quality["correct_predictions_pc"] = quality[
+            "correct_predictions"
+        ] / len(self.y_test)
+        quality["false_positive_pc"] = quality["false_positive"] / len(
+            self.y_test
+        )
+        quality["false_negative_pc"] = quality["false_negative"] / len(
+            self.y_test
+        )
+        quality["wrong_side_pc"] = quality["wrong_side"] / len(self.y_test)
+        quality["prob_threshold"] = prob_threshold
+        quality["diff_threshold"] = diff_threshold
+        quality["null_threshold"] = null_threshold
+        return quality
+
+    def _get_profit(
+        self,
+        prob_threshold: float,
+        diff_threshold: float,
+        null_threshold: float,
+    ) -> float:
+        predictions = self._get_predictions(
+            prob_threshold, diff_threshold, null_threshold
+        )
+        quality = self._get_predictions_quality(
+            prob_threshold, diff_threshold, null_threshold
+        )
+        return (
+            len(self.y)
+            * quality["correct_predictions_pc"]
+            * (self.punch - 2 * self.commision)
+            - len(self.y) * quality["false_positive_pc"] * 2 * self.commision
+            - len(self.y)
+            * quality["wrong_side_pc"]
+            * (self.punch + 2 * self.commision)
+        )
+
+    def find_predict_thresholds(self):
+        Logger.debug("Find predic threshold")
+        qualities = []
+        for null_threshold in np.arange(0.3, 0.8, 0.05):
+            for prob_threshold in np.arange(0.3, 0.7, 0.05):
+                for diff_threshold in np.arange(0.00, 0.20, 0.05):
+                    qualities.append(
+                        self._get_predictions_quality(
+                            prob_threshold, diff_threshold, null_threshold
+                        )
+                    )
+        qualities = list(
+            sorted(
+                qualities,
+                key=lambda quality: -self._get_profit(
+                    quality["prob_threshold"],
+                    quality["diff_threshold"],
+                    quality["null_threshold"],
+                ),
+            )
+        )
+        self.prob_threshold = qualities[0]["prob_threshold"]
+        self.diff_threshold = qualities[0]["diff_threshold"]
+        self.null_threshold = qualities[0]["null_threshold"]
+
+        print(
+            f"Prob_threshold {self.prob_threshold}, diff_threshold {self.diff_threshold}, null_threshold {self.null_threshold}"
+        )
+        predictions = self._get_predictions(
+            self.prob_threshold, self.diff_threshold, self.null_threshold
+        )
+        print("Accuracy", accuracy_score(predictions, self.y_test))
+        profit = self._get_profit(
+            self.prob_threshold, self.diff_threshold, self.null_threshold
+        )
+        print(
+            "Profit from 3000$ fot 6 months",
+            profit * 3000,
+            "$",
+            profit * 100,
+            "%",
+        )
+        print()
+
+    def _print_feature_importance(self) -> None:
+        train_pool = Pool(self.X_train, self.y_train)
+        feature_importances = self.model.get_feature_importance(train_pool)
+        feature_names = self.X_train.columns
+        print("Top-15 feature importance")
+        for score, name in sorted(
+            zip(feature_importances, feature_names), reverse=True
+        )[:15]:
+            print("{}: {}".format(name, score))
+        print()
+
+    def print_model_info(self) -> None:
+        self._print_feature_importance()
+        quality = self._get_predictions_quality(
+            self.prob_threshold, self.diff_threshold, self.null_threshold
+        )
+        print(quality)
+        print()
+        correct_accuracy = quality["correct_predictions"] / len(
+            self.y_test[self.y_test != 0]
+        )
+        print(
+            f"Correct accuracy = correct prediction / total positive num = {correct_accuracy}"
+        )
+        FPR = quality["false_positive"] / len(self.y_test[self.y_test == 0])
+        print(f"FPR = false positive / total negative num = {FPR}")
+        FNR = quality["false_negative"] / len(self.y_test[self.y_test != 0])
+        print(f"FNR = false negative / total positive num = {FNR}")
+        cases_pc = (
+            (
+                quality["correct_predictions"]
+                + quality["false_positive"]
+                + quality["wrong_side"]
+            )
+            / len(self.y_test[self.y_test != 0])
+            * 100
+        )
+        probability_pc = (
+            quality["correct_predictions"]
+            / (
+                quality["correct_predictions"]
+                + quality["false_positive"]
+                + quality["wrong_side"]
+            )
+            * 100
+        )
+        print(
+            f"Model in {cases_pc}% of cases with probability {probability_pc}% predict a correct market jump"
+        )
+
+
+def main():
+    tm = TrainModel(
+        "../../data/trades/processed/trades-df-2021_8_1_0_0_0-2022_1_22_0_0_0.csv"
     )
-    result = {
-        "correct_predictions": 0,
-        "false_positive": 0,
-        "false_negative": 0,
-        "wrong_side": 0,
-    }
-    for i in range(len(p)):
-        t = int(y_test[i : i + 1])
-        if p[i] == t != 0:
-            result["correct_predictions"] += 1
-        elif p[i] != t and t != 0 and p[i] != 0:
-            result["wrong_side"] += 1
-        elif p[i] != 0 and t == 0:
-            result["false_positive"] += 1
-        elif p[i] == 0 and t != 0:
-            result["false_negative"] += 1
-
-    result["correct_predictions"] /= len(y_test)
-    result["false_positive"] /= len(y_test)
-    result["false_negative"] /= len(y_test)
-    result["wrong_side"] /= len(y_test)
-    result["prob_threshold"] = prob_threshold
-    result["diff_threshold"] = diff_threshold
-    result["null_threshold"] = null_threshold
-    results.append(result)
-    return p
+    tm.train()
+    tm.find_predict_thresholds()
+    tm.print_model_info()
 
 
-for null_threshold in np.arange(0.3, 0.8, 0.05):
-    for prob_threshold in np.arange(0.3, 0.7, 0.05):
-        for diff_threshold in np.arange(0.00, 0.20, 0.05):
-            f(prob_threshold, diff_threshold, null_threshold)
-
-results = list(
-    sorted(
-        results,
-        key=lambda result: -calculate_profit(
-            result["prob_threshold"],
-            result["diff_threshold"],
-            result["null_threshold"],
-        ),
-    )
-)
-print(results[0])
-
-prob_threshold = results[0]["prob_threshold"]
-diff_threshold = results[0]["diff_threshold"]
-null_threshold = results[0]["null_threshold"]
-
-print(
-    f"prob_threshold {prob_threshold}, diff_threshold {diff_threshold}, null_threshold {null_threshold}"
-)
-p = f(prob_threshold, diff_threshold, null_threshold)
-print("accuracy", accuracy_score(p, y_test))
-result = {
-    "correct_predictions": 0,
-    "false_positive": 0,
-    "false_negative": 0,
-    "wrong_side": 0,
-}
-for i in range(len(p)):
-    t = int(y_test[i : i + 1])
-    if p[i] == t != 0:
-        result["correct_predictions"] += 1
-    elif p[i] != t and t != 0 and p[i] != 0:
-        result["wrong_side"] += 1
-    elif p[i] != 0 and t == 0:
-        result["false_positive"] += 1
-    elif p[i] == 0 and t != 0:
-        result["false_negative"] += 1
-
-result["correct_predictions_pc"] = result["correct_predictions"] / len(y_test)
-result["false_positive_pc"] = result["false_positive"] / len(y_test)
-result["false_negative_pc"] = result["false_negative"] / len(y_test)
-result["wrong_side_pc"] = result["wrong_side"] / len(y_test)
-print(result)
-
-profit = calculate_profit(prob_threshold, diff_threshold, null_threshold)
-print("profit from 3000$ fot 6 months", profit * 3000, "$", profit * 100, "%")
-
-correct_accuracy = result["correct_predictions"] / len(y_test[y_test != 0])
-print(
-    f"Correct accuracy = correct prediction / total positive num = {correct_accuracy}"
-)
-FPR = result["false_positive"] / len(y_test[y_test == 0])
-print(f"FPR = false positive / total negative num = {FPR}")
-FNR = result["false_negative"] / len(y_test[y_test != 0])
-print(f"FNR = false negative / total positive num = {FNR}")
-cases_pc = (
-    (
-        result["correct_predictions"]
-        + result["false_positive"]
-        + result["wrong_side"]
-    )
-    / len(y_test[y_test != 0])
-    * 100
-)
-probability_pc = (
-    result["correct_predictions"]
-    / (
-        result["correct_predictions"]
-        + result["false_positive"]
-        + result["wrong_side"]
-    )
-    * 100
-)
-print(
-    f"Model in {cases_pc}% of cases with probability {probability_pc}% predict a correct market jump"
-)
+if __name__ == "__main__":
+    main()
