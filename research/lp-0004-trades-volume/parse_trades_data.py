@@ -330,7 +330,7 @@ class DataParser:
                     ](window_slice)
 
     def calculate_punches(self, update, side) -> None:
-        if side == "BUY" and self.punch_window['SELL']:
+        if side == "BUY" and self.punch_window["SELL"]:
             update[
                 "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
             ] = max(
@@ -339,7 +339,7 @@ class DataParser:
                 - self.get_max_price(self.punch_window, "SELL")
                 / float(self.trades_window["BUY"][-1]["price"]),
             )
-        elif side == "SELL" and self.punch_window['BUY']:
+        elif side == "SELL" and self.punch_window["BUY"]:
             update[
                 "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
             ] = min(
@@ -349,7 +349,9 @@ class DataParser:
                 / float(self.trades_window["SELL"][-1]["price"]),
             )
         else:
-            update["punch-" + side + "-" + str(self.punch_window_sec) + "-sec"] = 0
+            update[
+                "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
+            ] = 0
 
     def add_result(self) -> None:
         if not self.trades_window["BUY"] or not self.trades_window["SELL"]:
@@ -359,12 +361,7 @@ class DataParser:
         max_punch = 0
 
         for side in self.SIDES:
-            if not self.punch_window[side]:
-                update[
-                    "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
-                ] = 0
-            else:
-                self.calculate_punches(update, side)
+            self.calculate_punches(update, side)
             max_punch = max(
                 max_punch,
                 update[
