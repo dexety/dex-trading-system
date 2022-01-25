@@ -371,7 +371,7 @@ class DataParser:
             )
 
         if (
-            max_punch > self.punch_threashold
+            abs(max_punch) > self.punch_threashold
             or np.random.random() < self.random_data_pc
         ):
             current_trade_dt = self.get_datetime(
