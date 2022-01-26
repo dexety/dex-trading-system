@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from catboost import CatBoostClassifier, Pool, metrics, cv
+import json
+from catboost import CatBoostClassifier, Pool, metrics
 from sklearn.metrics import accuracy_score
 import random
 import sys
@@ -109,7 +110,7 @@ class TrainModel:
             eval_set=validate_pool,
             plot=False,
         )
-        self.model.save_model("catboost_model.dump")
+        self.model.save_model("punch_predictor_model.dump")
         self.predictions_probs = self.model.predict_proba(self.X_test)
 
         Logger.debug(
@@ -240,6 +241,17 @@ class TrainModel:
         print(
             f"Prob_threshold {self.prob_threshold}, diff_threshold {self.diff_threshold}, null_threshold {self.null_threshold}"
         )
+        with open(
+            "punch_predictor_thresholds.dump", "w", encoding="utf-8"
+        ) as out_file:
+            json.dump(
+                {
+                    "prob_threshold": self.prob_threshold,
+                    "diff_threshold": self.diff_threshold,
+                    "null_threshold": self.null_threshold,
+                },
+                out_file,
+            )
         predictions = self._get_predictions(
             self.prob_threshold, self.diff_threshold, self.null_threshold
         )
