@@ -55,7 +55,9 @@ class WindowIndicators:
 
     @staticmethod
     def open_close_diff(window) -> float:
-        return float(window[-1]["price"]) - float(window[0]["price"])
+        if not window:
+            return 0
+        return float(window[-1]["price"]) / float(window[0]["price"])
 
     @staticmethod
     def moving_average(window) -> float:
@@ -106,8 +108,8 @@ class WindowIndicators:
 
 
 class DataParser:
-    punch_threashold = 0.0001
-    trades_window_slices_sec = [600, 60, 30, 10, 1]
+    punch_threashold = 0.0002
+    trades_window_slices_sec = [600, 60, 30, 10, 5, 1]
     trades_window_sec = 600
     punch_window_sec = 30
     random_data_pc = 0.005
@@ -139,9 +141,14 @@ class DataParser:
         self.set_trades_window()
         self.set_punch_window()
 
-    def reset_windows(self) -> None:
-        self.trades_window = {"BUY": deque(), "SELL": deque()}
-        self.punch_window = {"BUY": deque(), "SELL": deque()}
+    def reset_windows_after_punch(self) -> None:
+        punch_window_head_time = self.get_min_item_time_from_window(
+            self.punch_window
+        )
+        while self.get_min_item_time_from_window(
+            self.punch_window
+        ) - punch_window_head_time < timedelta(seconds=self.punch_window_sec):
+            self.update_punch_window()
 
     @staticmethod
     def get_datetime(string_time: str) -> datetime:
@@ -195,13 +202,14 @@ class DataParser:
             return self.get_datetime(trade["createdAt"])
         return None
 
-    def non_empty_window(self, window: dict) -> bool:
-        return self.get_max_item_time_from_window(
-            window
-        ) or self.get_max_item_time_from_window(window)
+    def is_window_empty(self, window: dict) -> bool:
+        return not (
+            self.get_max_item_time_from_window(window)
+            or self.get_max_item_time_from_window(window)
+        )
 
     def set_trades_window(self) -> None:
-        while not self.non_empty_window(
+        while self.is_window_empty(
             self.trades_window
         ) or self.get_max_item_time_from_window(
             self.trades_window
@@ -216,7 +224,7 @@ class DataParser:
             self.trades_window[new_trade["side"]].append(new_trade)
 
     def set_punch_window(self) -> None:
-        while not self.non_empty_window(
+        while self.is_window_empty(
             self.punch_window
         ) or self.get_max_item_time_from_window(
             self.punch_window
@@ -239,7 +247,7 @@ class DataParser:
                 self.get_min_item_from_window(self.punch_window)["side"]
             ].popleft()
         while self.data_it < self.data_it_max and (
-            not self.non_empty_window(self.punch_window)
+            self.is_window_empty(self.punch_window)
             or (
                 self.get_max_item_time_from_window(self.punch_window)
                 - self.get_min_item_time_from_window(self.punch_window)
@@ -266,18 +274,23 @@ class DataParser:
         self.update_punch_window()
         self.update_trades_window()
 
-    def add_result(self) -> None:
-        update = dict()
-        max_punch = 0
-
-        current_trade_dt = self.get_datetime(
-            self.data[self.data_it]["createdAt"]
+    def get_max_price(self, window: dict, side: str) -> float:
+        return float(
+            max(
+                window[side],
+                key=lambda trade: trade["price"],
+            )["price"]
         )
-        midnight = current_trade_dt.replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        update["seconds-since-midnight"] = (current_trade_dt - midnight).seconds
 
+    def get_min_price(self, window: dict, side: str) -> float:
+        return float(
+            min(
+                window[side],
+                key=lambda trade: trade["price"],
+            )["price"]
+        )
+
+    def calculate_indicators(self, update: dict) -> None:
         for side in self.SIDES:
             for n_trades_ago in [1, 10, 50, 100, 1000]:
                 diff = (
@@ -316,44 +329,68 @@ class DataParser:
                         indicator_name
                     ](window_slice)
 
+    def calculate_punches(self, update, side) -> None:
+        if side == "BUY" and self.punch_window["SELL"]:
             update[
                 "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
-            ] = (
-                (
-                    (
-                        1
-                        - float(
-                            max(
-                                self.punch_window[side],
-                                key=lambda trade: trade["price"],
-                            )["price"]
-                        )
-                        / float(
-                            min(
-                                self.punch_window[side],
-                                key=lambda trade: trade["price"],
-                            )["price"]
-                        )
-                    )
-                    * (1 if side == "SELL" else -1)
-                )
-                if self.punch_window[side]
-                else 0
+            ] = max(
+                0,
+                1
+                - self.get_max_price(self.punch_window, "SELL")
+                / float(self.trades_window["BUY"][-1]["price"]),
             )
+        elif side == "SELL" and self.punch_window["BUY"]:
+            update[
+                "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
+            ] = min(
+                0,
+                1
+                - self.get_min_price(self.punch_window, "BUY")
+                / float(self.trades_window["SELL"][-1]["price"]),
+            )
+        else:
+            update[
+                "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
+            ] = 0
+
+    def add_result(self) -> None:
+        if not self.trades_window["BUY"] or not self.trades_window["SELL"]:
+            return
+
+        update = {}
+        max_punch = 0
+
+        for side in self.SIDES:
+            self.calculate_punches(update, side)
             max_punch = max(
                 max_punch,
                 update[
                     "punch-" + side + "-" + str(self.punch_window_sec) + "-sec"
                 ],
+                key=abs,
             )
 
         if (
-            max_punch > self.punch_threashold
+            abs(max_punch) > self.punch_threashold
             or np.random.random() < self.random_data_pc
         ):
+            current_trade_dt = self.get_datetime(
+                self.data[self.data_it]["createdAt"]
+            )
+            midnight = current_trade_dt.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            update["seconds-since-midnight"] = (
+                current_trade_dt - midnight
+            ).seconds
+
+            self.calculate_indicators(update)
+
+            current_trade_dt = self.get_datetime(
+                self.data[self.data_it]["createdAt"]
+            )
             self.output_data.append(update)
-            self.reset_windows()
-            self.init_windows()
+            self.reset_windows_after_punch()
 
     def write_data(self) -> None:
         field_names = list(self.output_data[0].keys())
@@ -371,13 +408,16 @@ class DataParser:
 
 
 def main():
+    args = []
+    if len(sys.argv) != 3:
+        args = [0, 0, 1]
+    else:
+        args = sys.argv
     input_path = (
-        "../../data/trades/raw/trades-2021_11_1_0_0_0-2021_12_21_0_0_0.json"
+        "../../data/trades/raw/trades-2021_8_1_0_0_0-2022_1_22_0_0_0.json"
     )
-    output_path = (
-        f"trades-df-2021_11_1_0_0_0-2021_12_21_0_0_0-{sys.argv[1]}.csv"
-    )
-    dp = DataParser(input_path, output_path, int(sys.argv[1]), int(sys.argv[2]))
+    output_path = f"trades-df-2021_8_1_0_0_0-2022_1_22_0_0_0-{args[1]}.csv"
+    dp = DataParser(input_path, output_path, int(args[1]), int(args[2]))
     dp.run_and_write()
 
 

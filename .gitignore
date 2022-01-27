@@ -7,11 +7,11 @@ __pycache__
 data/
 *.json
 *.csv
-
-# brownie
 *.history
 *.hypothesis/
 *build/
 *reports/
 *.env
 *catboost_info
+*.dump
+*.ipynb_checkpoints/
