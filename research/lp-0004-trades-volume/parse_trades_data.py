@@ -116,8 +116,12 @@ class DataParser:
         update = {}
         max_punch = 0
 
-        current_trade_dt = self.get_datetime(
-            self.data[self.data_it]["createdAt"]
+    def get_max_price(self, window: dict, side: str) -> float:
+        return float(
+            max(
+                window[side],
+                key=lambda trade: trade["price"],
+            )["price"]
         )
 
     def get_min_price(self, window: dict, side: str) -> float:
