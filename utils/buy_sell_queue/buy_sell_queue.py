@@ -7,12 +7,11 @@ class BuySellWindow:
     side_queues = {"BUY": deque(), "SELL": deque()}
     common_queue = deque()
 
-    from_dt = datetime()
-    to_dt = datetime()
-    window_interval_td = timedelta()
-
     def __init__(self, window_interval_td: timedelta) -> None:
         self.window_interval_td = window_interval_td
+    
+    def __getitem__(self, side: str) -> deque:
+        return self.side_queues[side]
 
     def set_window_borders(self, from_dt: datetime) -> None:
         self.from_dt = from_dt
@@ -45,3 +44,19 @@ class BuySellWindow:
             i += 1
         
         return slice
+    
+    def get_side_queue_max_price(self, side: str) -> float:
+        return float(
+            max(
+                self[side],
+                key=lambda trade: trade["price"],
+            )["price"]
+        )
+
+    def get_side_queue_min_price(self, side: str) -> float:
+        return float(
+            min(
+                self[side],
+                key=lambda trade: trade["price"],
+            )["price"]
+        )
