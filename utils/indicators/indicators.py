@@ -91,7 +91,7 @@ class Indicators:
 
     @staticmethod
     def WI_exp_moving_average(indicators_values: dict, window: list, WI_column_name: str, alpha=0.5) -> None:
-        Logger.debug(WI_column_name)
+        # Logger.log(WI_column_name)
         if not window:
             indicators_values[WI_column_name] = 0
             return
@@ -102,12 +102,12 @@ class Indicators:
 
     @staticmethod
     def WI_trade_amount(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        Logger.debug(WI_column_name)
+        # Logger.log(WI_column_name)
         indicators_values[WI_column_name] = len(window)
 
     @staticmethod
     def WI_trade_volume(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        Logger.debug(WI_column_name)
+        # Logger.log(WI_column_name)
         if not window:
             indicators_values[WI_column_name] = 0
             return
@@ -115,7 +115,7 @@ class Indicators:
 
     @staticmethod
     def WI_open_close_diff(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        Logger.debug(WI_column_name)
+        # Logger.log(WI_column_name)
         if not window:
             indicators_values[WI_column_name] = 0
             return
@@ -123,7 +123,7 @@ class Indicators:
 
     @staticmethod
     def WI_moving_average(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        Logger.debug(WI_column_name)
+        # Logger.log(WI_column_name)
         if not window:
             indicators_values[WI_column_name] = 0
             return
@@ -133,7 +133,7 @@ class Indicators:
 
     @staticmethod
     def WI_weighted_moving_average(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        Logger.debug(WI_column_name)
+        # Logger.log(WI_column_name)
         if not window:
             indicators_values[WI_column_name] = 0
             return
@@ -149,7 +149,7 @@ class Indicators:
 
     @staticmethod
     def WI_stochastic_oscillator(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        Logger.debug(WI_column_name)
+        # Logger.log(WI_column_name)
         if not window:
             indicators_values[WI_column_name] = 0
             return

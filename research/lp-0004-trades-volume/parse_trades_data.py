@@ -76,7 +76,7 @@ class DataParser:
         return trade
 
     def clean_trade_window(self) -> None:
-        while not self.trade_window.trade_inside(
+        while self.trade_window.common_queue and not self.trade_window.trade_inside(
             self.trade_window.common_queue[0]
         ):
             self.trade_window.pop_front()
@@ -86,7 +86,7 @@ class DataParser:
             self.trade_window.push_back(self.get_new_trade())
 
     def move_from_punch_window_to_trade_window(self) -> None:
-        while not self.punch_window.trade_inside(
+        while self.punch_window.common_queue and not self.punch_window.trade_inside(
             self.punch_window.common_queue[0]
         ):
             self.trade_window.push_back(self.punch_window.pop_front())
