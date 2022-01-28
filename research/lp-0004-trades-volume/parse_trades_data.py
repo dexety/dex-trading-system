@@ -30,7 +30,7 @@ class DataParser:
         max_thread_num: int,
     ) -> None:
         Logger.debug("Parser initiation started...")
-        self.data = json.load(open(input_path, "r", encoding="utf8"))[:10000]
+        self.data = json.load(open(input_path, "r", encoding="utf8"))
         self.data_it = len(self.data) // max_thread_num * current_thread_num
         self.data_it_max = (
             len(self.data) // max_thread_num * (current_thread_num + 1)
@@ -51,7 +51,9 @@ class DataParser:
         self.trade_window = BuySellWindow(self.trade_window_td)
         self.punch_window = BuySellWindow(self.punch_window_td)
         self.set_window_borders(first_trade_dt)
+        Logger.debug("Trade window filling started...")
         self.fill_trade_window()
+        Logger.debug("Punch window filling started...")
         self.fill_punch_window()
         Logger.debug("Windows initiated")
 
@@ -107,6 +109,7 @@ class DataParser:
         self.move_from_punch_window_to_trade_window()
 
     def add_result(self) -> None:
+        # Logger.debug("Processing result... data_it = " + str(self.data_it))
         if not self.trade_window["BUY"] or not self.trade_window["SELL"]:
             return
 
@@ -117,6 +120,7 @@ class DataParser:
             abs(max_punch) > self.punch_threashold
             or np.random.random() < self.random_data_pc
         ):
+            Logger.debug("Adding result... data_it = " + str(self.data_it))
             Indicators.fill_features_values(indicators_values, self.trade_window, self.trade_window_slices_sec, self.n_trades_ago_list)
             self.output_data.append(indicators_values)
             self.update_windows_after_punch()

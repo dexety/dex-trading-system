@@ -4,14 +4,15 @@ from datetime import datetime, timedelta
 from utils.helpful_scripts import string_to_datetime
 
 class BuySellWindow:
-    side_queues = {"BUY": deque(), "SELL": deque()}
+    buy_queue = deque()
+    sell_queue = deque()
     common_queue = deque()
 
     def __init__(self, window_interval_td: timedelta) -> None:
         self.window_interval_td = window_interval_td
     
     def __getitem__(self, side: str) -> deque:
-        return self.side_queues[side]
+        return self.buy_queue if side == "BUY" else self.sell_queue
 
     def set_window_borders(self, from_dt: datetime) -> None:
         self.from_dt = from_dt
@@ -26,21 +27,21 @@ class BuySellWindow:
 
     def pop_front(self) -> dict:
         first_trade = self.common_queue.popleft()
-        self.side_queues[first_trade["side"]].popleft()
+        self[first_trade["side"]].popleft()
         return first_trade
 
     def push_back(self, trade: dict) -> None:
         self.common_queue.append(trade)
-        self.side_queues[trade["side"]].append(trade)
+        self[trade["side"]].append(trade)
 
     def get_side_queue_slice(self, side: str, seconds: int) -> list:
         if seconds == self.window_interval_td.seconds:
-            return self.side_queues[side]
+            return self[side]
         
         slice = []
         i = 1
-        while i <= len(self.side_queues[side]) and string_to_datetime(self.side_queues[side][-i]["createdAt"]) >= self.to_dt - timedelta(seconds=seconds):
-            slice.append(self.side_queues[side][-i])
+        while i <= len(self[side]) and string_to_datetime(self[side][-i]["createdAt"]) >= self.to_dt - timedelta(seconds=seconds):
+            slice.append(self[side][-i])
             i += 1
         
         return slice
