@@ -20,7 +20,6 @@ class DataParser:
     punch_window_td = timedelta(seconds=30)
     random_data_pc = 0.008
     SIDES = ["BUY", "SELL"]
-    output_data = []
 
     def __init__(
         self,
@@ -37,6 +36,7 @@ class DataParser:
         self.input_path = input_path
         self.output_path = output_path
         self.progress_bar = tqdm(range(self.data_it_max - self.data_it))
+        self.output_data = []
 
         self.trade_window = None
         self.init_windows()
