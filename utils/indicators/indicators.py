@@ -12,33 +12,32 @@ class Indicators:
         indicators_values: dict, queue: BuySellQueue
     ) -> float:
         """returns max punch"""
-        max_punch = 0
-        for side in ["BUY", "SELL"]:
-            column_name = (
-                "punch-" + side + "-" + str(queue.window_interval_td) + "-sec"
-            )
-            if side == "BUY" and queue["SELL"] and queue["SELL"]:
-                indicators_values[column_name] = max(
-                    0,
-                    1
-                    - queue.get_side_queue_max_price("SELL")
-                    / float(queue["BUY"][-1]["price"]),
-                )
-            elif side == "SELL" and queue["SELL"] and queue["SELL"]:
-                indicators_values[column_name] = min(
-                    0,
-                    1
-                    - queue.get_side_queue_min_price("BUY")
-                    / float(queue["SELL"][-1]["price"]),
-                )
-            else:
-                indicators_values[column_name] = 0
+        buy_column_name = (
+            "punch-BUY-" + str(queue.window_interval_td) + "-sec"
+        )
+        sell_column_name = (
+            "punch-SELL-" + str(queue.window_interval_td) + "-sec"
+        )
 
-            max_punch = max(
-                max_punch,
-                indicators_values[column_name],
-                key=abs,
-            )
+        indicators_values[buy_column_name] = max(
+            0,
+            1
+            - queue.get_side_queue_max_price("SELL")
+            / float(queue["BUY"][-1]["price"]),
+        ) if queue["BUY"] else 0
+
+        indicators_values[sell_column_name] = min(
+            0,
+            1
+            - queue.get_side_queue_min_price("BUY")
+            / float(queue["SELL"][-1]["price"]),
+        ) if queue["BUY"] else 0
+
+        max_punch = max(
+            indicators_values[buy_column_name],
+            indicators_values[sell_column_name],
+            key=abs,
+        )
 
         return max_punch
 
