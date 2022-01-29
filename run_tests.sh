@@ -1,1 +1,1 @@
-./tests/run_tests.sh
+./tests/utils/run_tests.sh

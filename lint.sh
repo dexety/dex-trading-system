@@ -1,2 +1,2 @@
-./tests/run_linter.sh
-./tests/linter_check.sh
+./tests/utils/run_linter.sh
+./tests/utils/linter_check.sh

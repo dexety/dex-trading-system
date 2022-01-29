@@ -1,28 +1,30 @@
-from datetime import timedelta
 import sys
-
-from utils.logger.logger import Logger
 
 sys.path.append("../../")
 
-from utils.buy_sell_queue.buy_sell_queue import BuySellWindow
+from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
 from utils.helpful_scripts import string_to_datetime
+
 
 class Indicators:
     @staticmethod
-    def fill_punches_values(indicators_values: dict, queue: BuySellWindow) -> float:
+    def fill_punches_values(
+        indicators_values: dict, queue: BuySellQueue
+    ) -> float:
         """returns max punch"""
         max_punch = 0
         for side in ["BUY", "SELL"]:
-            column_name = "punch-" + side + "-" + str(queue.window_interval_td) + "-sec"
-            if side == "BUY" and queue["SELL"]:
+            column_name = (
+                "punch-" + side + "-" + str(queue.window_interval_td) + "-sec"
+            )
+            if side == "BUY" and queue["SELL"] and queue["SELL"]:
                 indicators_values[column_name] = max(
                     0,
                     1
                     - queue.get_side_queue_max_price("SELL")
                     / float(queue["BUY"][-1]["price"]),
                 )
-            elif side == "SELL" and queue["BUY"]:
+            elif side == "SELL" and queue["SELL"] and queue["SELL"]:
                 indicators_values[column_name] = min(
                     0,
                     1
@@ -31,6 +33,7 @@ class Indicators:
                 )
             else:
                 indicators_values[column_name] = 0
+
             max_punch = max(
                 max_punch,
                 indicators_values[column_name],
@@ -40,58 +43,74 @@ class Indicators:
         return max_punch
 
     @staticmethod
-    def fill_features_values(indicators_punch_values: dict, queue: BuySellWindow, slices_lengths: list, n_trades_ago_list: list) -> None:
-        WI_dict = dict()
-        for name in Indicators.__dict__.keys():
+    def fill_features_values(
+        indicators_punch_values: dict,
+        queue: BuySellQueue,
+        slices_lengths: list,
+        n_trades_ago_list: list,
+    ) -> None:
+        WI_dict = {}
+        for name, indicator in Indicators.__dict__.items():
             if name[:2] == "WI":
-                WI_dict[name] = Indicators.__dict__[name].__func__
+                WI_dict[name] = indicator.__func__
 
-        indicators_punch_values["seconds-since-midnight"] = Indicators.seconds_since_midnight(queue.common_queue[-1])
+        indicators_punch_values[
+            "seconds-since-midnight"
+        ] = Indicators.seconds_since_midnight(queue.common_queue[-1])
 
         for side in ["BUY", "SELL"]:
             for n_trades_ago in n_trades_ago_list:
-                Indicators.seconds_since_n_trades_ago(indicators_punch_values, queue[side], n_trades_ago, side)
+                Indicators.seconds_since_n_trades_ago(
+                    indicators_punch_values, queue[side], n_trades_ago, side
+                )
             for window_slice_sec in slices_lengths:
-                window_slice = queue.get_side_queue_slice(side, window_slice_sec)
+                window_slice = queue.get_side_queue_slice(
+                    side, window_slice_sec
+                )
 
                 for WI_name, WI_function in WI_dict.items():
-                    column_name = WI_name + "-" + str(window_slice_sec) + "-sec-" + side
-                    WI_function(indicators_punch_values, window_slice, column_name)
-    
+                    column_name = (
+                        WI_name + "-" + str(window_slice_sec) + "-sec-" + side
+                    )
+                    WI_function(
+                        indicators_punch_values, window_slice, column_name
+                    )
+
     @staticmethod
-    def seconds_since_n_trades_ago(indicators_values: dict, window, n_trades_ago: int, side: str) -> None:
-        column_name = "seconds-since-" + str(n_trades_ago) + "-trades-ago-" + side
+    def seconds_since_n_trades_ago(
+        indicators_values: dict, window, n_trades_ago: int, side: str
+    ) -> None:
+        column_name = (
+            "seconds-since-" + str(n_trades_ago) + "-trades-ago-" + side
+        )
+        if not window:
+            indicators_values[column_name] = 0
+            return
         diff = (
-            string_to_datetime(
-                window[-1]["createdAt"]
-            )
+            string_to_datetime(window[-1]["createdAt"])
             - string_to_datetime(
                 window[
                     max(
                         0,
-                        len(window)
-                        - n_trades_ago
-                        - 1,
+                        len(window) - n_trades_ago - 1,
                     )
                 ]["createdAt"]
             )
         ).total_seconds()
         indicators_values[column_name] = diff
 
-        
     @staticmethod
     def seconds_since_midnight(trade) -> int:
-        current_trade_dt = string_to_datetime(
-            trade["createdAt"]
-        )
+        current_trade_dt = string_to_datetime(trade["createdAt"])
         midnight = current_trade_dt.replace(
             hour=0, minute=0, second=0, microsecond=0
         )
         return (current_trade_dt - midnight).seconds
 
     @staticmethod
-    def WI_exp_moving_average(indicators_values: dict, window: list, WI_column_name: str, alpha=0.5) -> None:
-        # Logger.log(WI_column_name)
+    def WI_exp_moving_average(
+        indicators_values: dict, window: list, WI_column_name: str, alpha=0.5
+    ) -> None:
         if not window:
             indicators_values[WI_column_name] = 0
             return
@@ -101,39 +120,48 @@ class Indicators:
         indicators_values[WI_column_name] = ema
 
     @staticmethod
-    def WI_trade_amount(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        # Logger.log(WI_column_name)
+    def WI_trade_amount(
+        indicators_values: dict, window: list, WI_column_name: str
+    ) -> None:
         indicators_values[WI_column_name] = len(window)
 
     @staticmethod
-    def WI_trade_volume(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        # Logger.log(WI_column_name)
+    def WI_trade_volume(
+        indicators_values: dict, window: list, WI_column_name: str
+    ) -> None:
         if not window:
             indicators_values[WI_column_name] = 0
             return
-        indicators_values[WI_column_name] = sum(map(lambda trade: float(trade["size"]), window))
-
-    @staticmethod
-    def WI_open_close_diff(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        # Logger.log(WI_column_name)
-        if not window:
-            indicators_values[WI_column_name] = 0
-            return
-        indicators_values[WI_column_name] = float(window[-1]["price"]) / float(window[0]["price"])
-
-    @staticmethod
-    def WI_moving_average(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        # Logger.log(WI_column_name)
-        if not window:
-            indicators_values[WI_column_name] = 0
-            return
-        indicators_values[WI_column_name] = sum(map(lambda trade: float(trade["price"]), window)) / len(
-            window
+        indicators_values[WI_column_name] = sum(
+            map(lambda trade: float(trade["size"]), window)
         )
 
     @staticmethod
-    def WI_weighted_moving_average(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        # Logger.log(WI_column_name)
+    def WI_open_close_diff(
+        indicators_values: dict, window: list, WI_column_name: str
+    ) -> None:
+        if not window:
+            indicators_values[WI_column_name] = 0
+            return
+        indicators_values[WI_column_name] = float(window[-1]["price"]) / float(
+            window[0]["price"]
+        )
+
+    @staticmethod
+    def WI_moving_average(
+        indicators_values: dict, window: list, WI_column_name: str
+    ) -> None:
+        if not window:
+            indicators_values[WI_column_name] = 0
+            return
+        indicators_values[WI_column_name] = sum(
+            map(lambda trade: float(trade["price"]), window)
+        ) / len(window)
+
+    @staticmethod
+    def WI_weighted_moving_average(
+        indicators_values: dict, window: list, WI_column_name: str
+    ) -> None:
         if not window:
             indicators_values[WI_column_name] = 0
             return
@@ -148,8 +176,9 @@ class Indicators:
         )
 
     @staticmethod
-    def WI_stochastic_oscillator(indicators_values: dict, window: list, WI_column_name: str) -> None:
-        # Logger.log(WI_column_name)
+    def WI_stochastic_oscillator(
+        indicators_values: dict, window: list, WI_column_name: str
+    ) -> None:
         if not window:
             indicators_values[WI_column_name] = 0
             return
