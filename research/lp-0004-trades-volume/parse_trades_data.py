@@ -163,12 +163,13 @@ def main():
     args = []
     if len(sys.argv) != 3:
         args = [0, 0, 1]
+        output_path = "../../data/trades/precessed/indicators_01-08-21_22-01-22.csv"
     else:
         args = sys.argv
+        output_path = f"../../data/trades/precessed/indicators_01-08-21_22-01-22_{args[1]}.csv"
     input_path = (
-        "../../data/trades/raw/trades-2021_8_1_0_0_0-2022_1_22_0_0_0.json"
+        "../../data/trades/raw/trades_01-08-21_22-01-22.json"
     )
-    output_path = f"trades-df-2021_8_1-2021_11_20-{args[1]}.csv"
     dp = DataParser(input_path, output_path, int(args[1]), int(args[2]))
     dp.run_and_write()
 
