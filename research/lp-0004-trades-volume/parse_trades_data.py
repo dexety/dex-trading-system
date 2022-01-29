@@ -82,8 +82,8 @@ class DataParser:
 
     def fill_trade_window(self) -> None:
         while (
-            self.trade_window.is_trade_inside(self.data[self.data_it])
-            and self.data_it < self.data_it_max
+            self.data_it < self.data_it_max
+            and self.trade_window.is_trade_inside(self.data[self.data_it])
         ):
             self.trade_window.push_back(self.get_new_trade())
 
@@ -100,8 +100,8 @@ class DataParser:
 
     def fill_punch_window(self) -> None:
         while (
-            self.punch_window.is_trade_inside(self.data[self.data_it])
-            and self.data_it < self.data_it_max
+            self.data_it < self.data_it_max
+            and self.punch_window.is_trade_inside(self.data[self.data_it])
         ):
             self.punch_window.push_back(self.get_new_trade())
 
@@ -125,6 +125,7 @@ class DataParser:
         ):
             self.update_windows_no_punch()
             return
+
         indicators_values = {}
         max_punch = Indicators.fill_punches_values(
             indicators_values, self.punch_window
@@ -165,9 +166,9 @@ def main():
     else:
         args = sys.argv
     input_path = (
-        "../../data/trades/raw/trades-2021_11_15_0_0_0-2021_11_20_0_0_0.json"
+        "../../data/trades/raw/trades-2021_8_1_0_0_0-2022_1_22_0_0_0.json"
     )
-    output_path = f"trades-df-2021_11_15_0_0_0-2021_11_20_0_0_0-{args[1]}.csv"
+    output_path = f"trades-df-2021_8_1-2021_11_20-{args[1]}.csv"
     dp = DataParser(input_path, output_path, int(args[1]), int(args[2]))
     dp.run_and_write()
 
