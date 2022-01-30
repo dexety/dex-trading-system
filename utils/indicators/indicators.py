@@ -18,8 +18,8 @@ class Indicators:
         indicators_values[buy_column_name] = (
             max(
                 0,
+                queue.get_side_queue_max_price("SELL") /
                 float(queue["BUY"][-1]["price"])
-                / queue.get_side_queue_max_price("SELL")
                 - 1,
             )
             if queue["BUY"]
