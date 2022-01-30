@@ -12,10 +12,8 @@ class Indicators:
         indicators_values: dict, queue: BuySellQueue
     ) -> float:
         """returns max punch"""
-        buy_column_name = "punch-BUY-" + str(queue.window_interval_td) + "-sec"
-        sell_column_name = (
-            "punch-SELL-" + str(queue.window_interval_td) + "-sec"
-        )
+        buy_column_name = f"punch-BUY-{str(queue.window_interval_td)}-sec"
+        sell_column_name = f"punch-SELL-{str(queue.window_interval_td)}-sec"
 
         indicators_values[buy_column_name] = (
             max(
