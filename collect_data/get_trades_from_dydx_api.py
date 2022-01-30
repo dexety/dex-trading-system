@@ -25,7 +25,7 @@ def get_trades_from_dydx_api(
 
 
 def get_formated_dt(dt: datetime) -> str:
-    return f"{dt.day:02d}-{dt.month:02d}-{dt.year % 100}"
+    return f"{dt.day:02d}-{dt.month:02d}-{dt.year}"
 
 
 def main():
