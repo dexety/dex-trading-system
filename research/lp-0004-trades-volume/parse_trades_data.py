@@ -21,11 +21,7 @@ class DataParser:
     random_data_pc = 0.008
     SIDES = ["BUY", "SELL"]
 
-    def __init__(
-        self,
-        input_path: str,
-        output_path: str
-    ) -> None:
+    def __init__(self, input_path: str, output_path: str) -> None:
         self.data = json.load(open(input_path, "r", encoding="utf8"))
         self.data_it = 0
         self.input_path = input_path
@@ -76,10 +72,9 @@ class DataParser:
             self.trade_window.pop_front()
 
     def fill_trade_window(self) -> None:
-        while (
-            self.data_it < len(self.data)
-            and self.trade_window.is_trade_inside(self.data[self.data_it])
-        ):
+        while self.data_it < len(
+            self.data
+        ) and self.trade_window.is_trade_inside(self.data[self.data_it]):
             self.trade_window.push_back(self.get_new_trade())
 
     def move_from_punch_window_to_trade_window(self) -> None:
@@ -94,10 +89,9 @@ class DataParser:
                 self.trade_window.push_back(trade_to_move)
 
     def fill_punch_window(self) -> None:
-        while (
-            self.data_it < len(self.data)
-            and self.punch_window.is_trade_inside(self.data[self.data_it])
-        ):
+        while self.data_it < len(
+            self.data
+        ) and self.punch_window.is_trade_inside(self.data[self.data_it]):
             self.punch_window.push_back(self.get_new_trade())
 
     def update_windows_no_punch(self) -> None:
@@ -140,7 +134,7 @@ class DataParser:
         #     self.update_windows_after_punch()
         # else:
         #     self.update_windows_no_punch()
-        self.update_windows_no_punch() 
+        self.update_windows_no_punch()
 
     def write_data(self) -> None:
         field_names = list(self.output_data[0].keys())
@@ -157,7 +151,9 @@ class DataParser:
 
 def main():
     input_path = "../../data/trades/raw/trades_01-08-2021_22-01-2022.json"
-    output_path = "../../data/trades/processed/indicators_01-08-2021_22-01-2022.csv"
+    output_path = (
+        "../../data/trades/processed/indicators_01-08-2021_22-01-2022.csv"
+    )
     dp = DataParser(input_path, output_path)
     dp.run_and_write()
 
