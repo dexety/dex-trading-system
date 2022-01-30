@@ -30,7 +30,7 @@ class DataParser:
         self.data_it = 0
         self.input_path = input_path
         self.output_path = output_path
-        self.progress_bar = tqdm(range(self.data_it_max - self.data_it))
+        self.progress_bar = tqdm(range(len(self.data)))
         self.output_data = []
 
         self.trade_window = None
