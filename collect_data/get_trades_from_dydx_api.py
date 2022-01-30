@@ -25,17 +25,17 @@ def get_trades_from_dydx_api(
 
 
 def get_formated_dt(dt: datetime) -> str:
-    return f"{dt.year}_{dt.month}_{dt.day}_{dt.hour}_{dt.minute}_{dt.second}"
+    return f"{dt.day:02d}-{dt.month:02d}-{dt.year}"
 
 
 def main():
     print("collection of trades begin")
     print("it may takes a lot of time")
-    start_dt = datetime(2021, 7, 21)
-    end_dt = datetime(2022, 1, 21)
+    start_dt = datetime(2022, 1, 21)
+    end_dt = datetime(2022, 1, 21, 0, 10)
     trades_data = get_trades_from_dydx_api(MARKET_ETH_USD, start_dt, end_dt)
     with open(
-        f"../data/trades/raw/trades-{get_formated_dt(start_dt)}-{get_formated_dt(end_dt)}.json",
+        f"../data/trades/raw/trades_{get_formated_dt(start_dt)}_{get_formated_dt(end_dt)}.json",
         "w",
         encoding="utf8",
     ) as file:
