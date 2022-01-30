@@ -142,9 +142,10 @@ class DataParser:
                 self.n_trades_ago_list,
             )
             self.output_data.append(indicators_values)
-            self.update_windows_after_punch()
-        else:
-            self.update_windows_no_punch()
+        #     self.update_windows_after_punch()
+        # else:
+        #     self.update_windows_no_punch()
+        self.update_windows_no_punch() 
 
     def write_data(self) -> None:
         field_names = list(self.output_data[0].keys())
