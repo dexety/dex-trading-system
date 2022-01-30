@@ -24,15 +24,10 @@ class DataParser:
     def __init__(
         self,
         input_path: str,
-        output_path: str,
-        current_thread_num: int,
-        max_thread_num: int,
+        output_path: str
     ) -> None:
         self.data = json.load(open(input_path, "r", encoding="utf8"))
-        self.data_it = len(self.data) // max_thread_num * current_thread_num
-        self.data_it_max = (
-            len(self.data) // max_thread_num * (current_thread_num + 1)
-        )
+        self.data_it = 0
         self.input_path = input_path
         self.output_path = output_path
         self.progress_bar = tqdm(range(self.data_it_max - self.data_it))
@@ -82,7 +77,7 @@ class DataParser:
 
     def fill_trade_window(self) -> None:
         while (
-            self.data_it < self.data_it_max
+            self.data_it < len(self.data)
             and self.trade_window.is_trade_inside(self.data[self.data_it])
         ):
             self.trade_window.push_back(self.get_new_trade())
@@ -100,7 +95,7 @@ class DataParser:
 
     def fill_punch_window(self) -> None:
         while (
-            self.data_it < self.data_it_max
+            self.data_it < len(self.data)
             and self.punch_window.is_trade_inside(self.data[self.data_it])
         ):
             self.punch_window.push_back(self.get_new_trade())
@@ -155,22 +150,15 @@ class DataParser:
             writer.writerows(self.output_data)
 
     def run_and_write(self) -> None:
-        while self.data_it < self.data_it_max:
+        while self.data_it < len(self.data):
             self.add_result()
         self.write_data()
 
 
 def main():
-    args = []
-    if len(sys.argv) != 3:
-        args = [0, 0, 1]
-    else:
-        args = sys.argv
-    input_path = (
-        "../../data/trades/raw/trades-2021_8_1_0_0_0-2022_1_22_0_0_0.json"
-    )
-    output_path = f"trades-df-2021_8_1-2021_11_20-{args[1]}.csv"
-    dp = DataParser(input_path, output_path, int(args[1]), int(args[2]))
+    input_path = "../../data/trades/raw/trades_01-08-2021_22-01-2022.json"
+    output_path = "../../data/trades/processed/indicators_01-08-2021_22-01-2022.csv"
+    dp = DataParser(input_path, output_path)
     dp.run_and_write()
 
 
