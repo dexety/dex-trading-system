@@ -14,7 +14,7 @@ from utils.helpful_scripts import string_to_datetime
 
 class DataParser:
     punch_threashold = 0.0002
-    trade_window_slices_sec = [600, 60, 30, 10, 5, 1]
+    trade_window_slices_sec = [600, 60, 30, 10, 5]
     n_trades_ago_list = [1000, 100, 50, 10, 1]
     trade_window_td = timedelta(seconds=600)
     punch_window_td = timedelta(seconds=30)
