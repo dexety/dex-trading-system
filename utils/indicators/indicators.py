@@ -120,7 +120,9 @@ class Indicators:
         ema = float(window[0]["price"])
         for i in range(1, len(window)):
             ema = ema + alpha * (float(window[i]["price"]) - ema)
-        indicators_values[WI_column_name] = ema
+        indicators_values[WI_column_name] = ema / (sum(
+            map(lambda trade: float(trade["price"]), window)
+        ) / len(window))
 
     @staticmethod
     def WI_trade_amount(
@@ -151,22 +153,11 @@ class Indicators:
         )
 
     @staticmethod
-    def WI_moving_average(
-        indicators_values: dict, window: list, WI_column_name: str
-    ) -> None:
-        if not window:
-            indicators_values[WI_column_name] = 0
-            return
-        indicators_values[WI_column_name] = sum(
-            map(lambda trade: float(trade["price"]), window)
-        ) / len(window)
-
-    @staticmethod
     def WI_weighted_moving_average(
         indicators_values: dict, window: list, WI_column_name: str
     ) -> None:
         if not window:
-            indicators_values[WI_column_name] = 0
+            indicators_values[WI_column_name] = 1
             return
         indicators_values[WI_column_name] = (
             sum(
@@ -176,7 +167,9 @@ class Indicators:
                 )
             )
             / sum(map(lambda trade: float(trade["size"]), window))
-        )
+        ) / (sum(
+            map(lambda trade: float(trade["price"]), window)
+        ) / len(window))
 
     @staticmethod
     def WI_stochastic_oscillator(
