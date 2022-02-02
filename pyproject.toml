@@ -17,4 +17,6 @@
         broad-except,
         no-member,
         logging-not-lazy,
+        no-name-in-module,
+        import-error,
     '''
