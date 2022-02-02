@@ -1,10 +1,6 @@
 import os
-import sys
 import json
 from datetime import datetime
-
-sys.path.append("../")
-
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
 

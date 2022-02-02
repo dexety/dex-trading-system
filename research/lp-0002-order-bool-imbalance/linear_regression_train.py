@@ -1,4 +1,3 @@
-import sys
 import json
 from collections import deque
 from datetime import datetime, timedelta
@@ -8,8 +7,7 @@ import numpy as np
 # from sklearn.linear_model import Ridge
 # from sklearn.linear_model import ElasticNet
 
-sys.path.append("../../")
-from ...connectors.dydx.order_book_cache import OrderBookCache
+from connectors.dydx.order_book_cache import OrderBookCache
 
 symbol = "ETH-USD"
 commision = 0.0004
