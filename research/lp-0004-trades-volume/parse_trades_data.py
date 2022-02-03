@@ -13,7 +13,8 @@ from utils.helpful_scripts import string_to_datetime
 
 
 class DataParser:
-    punch_threashold = 0.0002
+    stop_profit = 0.0008
+    stop_loss = 0.0004
     trade_window_slices_sec = [600, 60, 30, 10, 5]
     n_trades_ago_list = [1000, 100, 50, 10, 1]
     trade_window_td = timedelta(seconds=600)
@@ -36,7 +37,7 @@ class DataParser:
         first_trade_dt = string_to_datetime(
             self.data[self.data_it]["createdAt"]
         )
-        self.trade_window = BuySellQueue(self.trade_window_td)
+        self.trade_window = BuySellQueue(window_interval_td=self.trade_window_td, min_side_queue_length=max(self.n_trades_ago_list))
         self.punch_window = BuySellQueue(self.punch_window_td)
         self.set_window_borders(first_trade_dt)
         self.fill_trade_window()
@@ -67,7 +68,7 @@ class DataParser:
             self.trade_window.size()
             and not self.trade_window.is_trade_inside(
                 self.trade_window.common_queue[0]
-            )
+            ) and self.trade_window.needs_pop_front()
         ):
             self.trade_window.pop_front()
 
@@ -116,12 +117,12 @@ class DataParser:
             return
 
         indicators_values = {}
-        max_punch = Indicators.fill_punches_values(
-            indicators_values, self.punch_window
+        Indicators.fill_target_values(
+            indicators_values, self.trade_window, self.punch_window, self.stop_profit, self.stop_loss
         )
 
         if (
-            abs(max_punch) > self.punch_threashold
+            indicators_values["target"]
             or np.random.random() < self.random_data_pc
         ):
             Indicators.fill_features_values(
