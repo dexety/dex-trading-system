@@ -1,5 +1,7 @@
 import sys
 
+from pyparsing import col
+
 sys.path.append("../../")
 
 from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
@@ -8,42 +10,37 @@ from utils.helpful_scripts import string_to_datetime
 
 class Indicators:
     @staticmethod
-    def fill_punches_values(
-        indicators_values: dict, queue: BuySellQueue
-    ) -> float:
-        """returns max punch"""
-        buy_column_name = f"punch-BUY-{str(queue.window_interval_td)}-sec"
-        sell_column_name = f"punch-SELL-{str(queue.window_interval_td)}-sec"
+    def fill_target_values(
+        indicators_values: dict,
+        trade_window: BuySellQueue,
+        punch_window: BuySellQueue,
+        stop_profit: float,
+        stop_loss: float,
+    ) -> None:
+        column_name = "target"
 
-        indicators_values[buy_column_name] = (
-            max(
-                0,
-                queue.get_side_queue_max_price("SELL") /
-                float(queue["BUY"][-1]["price"])
-                - 1,
+        stop_loss_trigger_trade = punch_window.get_first_priced_below(
+            "SELL", trade_window.last_prices["BUY"] * (1 - stop_loss)
+        )
+        stop_profit_trigger_trade = punch_window.get_first_priced_above(
+            "BUY", trade_window.last_prices["BUY"] * (1 + stop_profit)
+        )
+
+        if not stop_loss_trigger_trade and not stop_profit_trigger_trade:
+            indicators_values[column_name] = 0
+        elif not stop_profit_trigger_trade:
+            indicators_values[column_name] = -1
+        elif not stop_loss_trigger_trade:
+            indicators_values[column_name] = 1
+        else:
+            indicators_values[column_name] = (
+                1
+                if (
+                    string_to_datetime(stop_loss_trigger_trade["createdAt"])
+                    > string_to_datetime(stop_profit_trigger_trade["createdAt"])
+                )
+                else -1
             )
-            if queue["BUY"]
-            else 0
-        )
-
-        indicators_values[sell_column_name] = (
-            min(
-                0,
-                queue.get_side_queue_min_price("BUY")
-                / float(queue["SELL"][-1]["price"])
-                - 1,
-            )
-            if queue["SELL"]
-            else 0
-        )
-
-        max_punch = max(
-            indicators_values[buy_column_name],
-            indicators_values[sell_column_name],
-            key=abs,
-        )
-
-        return max_punch
 
     @staticmethod
     def fill_features_values(
@@ -64,7 +61,7 @@ class Indicators:
         for side in ["BUY", "SELL"]:
             for n_trades_ago in n_trades_ago_list:
                 Indicators.seconds_since_n_trades_ago(
-                    indicators_punch_values, queue[side], n_trades_ago, side
+                    indicators_punch_values, queue, n_trades_ago, side
                 )
             for window_slice_sec in slices_lengths:
                 window_slice = queue.get_side_queue_slice(
@@ -73,7 +70,7 @@ class Indicators:
 
                 for WI_name, WI_function in WI_dict.items():
                     column_name = (
-                        WI_name + "-" + str(window_slice_sec) + "-sec-" + side
+                        WI_name + "-" + str(window_slice_sec) + "_sec-" + side
                     )
                     WI_function(
                         indicators_punch_values, window_slice, column_name
@@ -81,21 +78,24 @@ class Indicators:
 
     @staticmethod
     def seconds_since_n_trades_ago(
-        indicators_values: dict, window, n_trades_ago: int, side: str
+        indicators_values: dict,
+        queue: BuySellQueue,
+        n_trades_ago: int,
+        side: str,
     ) -> None:
         column_name = (
-            "seconds-since-" + str(n_trades_ago) + "-trades-ago-" + side
+            "seconds_since-" + str(n_trades_ago) + "-trades_ago-" + side
         )
-        if not window:
+        if not queue[side]:
             indicators_values[column_name] = 0
             return
         diff = (
-            string_to_datetime(window[-1]["createdAt"])
+            queue.to_dt
             - string_to_datetime(
-                window[
+                queue[side][
                     max(
                         0,
-                        len(window) - n_trades_ago - 1,
+                        len(queue[side]) - n_trades_ago - 1,
                     )
                 ]["createdAt"]
             )
@@ -115,14 +115,14 @@ class Indicators:
         indicators_values: dict, window: list, WI_column_name: str, alpha=0.5
     ) -> None:
         if not window:
-            indicators_values[WI_column_name] = 0
+            indicators_values[WI_column_name] = 1
             return
         ema = float(window[0]["price"])
         for i in range(1, len(window)):
             ema = ema + alpha * (float(window[i]["price"]) - ema)
-        indicators_values[WI_column_name] = ema / (sum(
-            map(lambda trade: float(trade["price"]), window)
-        ) / len(window))
+        indicators_values[WI_column_name] = ema / (
+            sum(map(lambda trade: float(trade["price"]), window)) / len(window)
+        )
 
     @staticmethod
     def WI_trade_amount(
@@ -167,16 +167,16 @@ class Indicators:
                 )
             )
             / sum(map(lambda trade: float(trade["size"]), window))
-        ) / (sum(
-            map(lambda trade: float(trade["price"]), window)
-        ) / len(window))
+        ) / (
+            sum(map(lambda trade: float(trade["price"]), window)) / len(window)
+        )
 
     @staticmethod
     def WI_stochastic_oscillator(
         indicators_values: dict, window: list, WI_column_name: str
     ) -> None:
         if not window:
-            indicators_values[WI_column_name] = 0
+            indicators_values[WI_column_name] = 1
             return
         indicators_values[WI_column_name] = (
             float(window[-1]["price"])
