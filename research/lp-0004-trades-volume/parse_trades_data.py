@@ -13,13 +13,13 @@ from utils.helpful_scripts import string_to_datetime
 
 
 class DataParser:
-    stop_profit = 0.0008
-    stop_loss = 0.0004
+    stop_profit = 0.002
+    stop_loss = 0.001
     trade_window_slices_sec = [600, 60, 30, 10, 5]
     n_trades_ago_list = [1000, 100, 50, 10, 1]
     trade_window_td = timedelta(seconds=600)
     punch_window_td = timedelta(seconds=30)
-    random_data_pc = 0.008
+    random_data_pc = 0.03
     SIDES = ["BUY", "SELL"]
 
     def __init__(self, input_path: str, output_path: str) -> None:
