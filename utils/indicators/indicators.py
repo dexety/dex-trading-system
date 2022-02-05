@@ -1,7 +1,5 @@
 import sys
 
-from pyparsing import col
-
 sys.path.append("../../")
 
 from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
