@@ -181,7 +181,7 @@ class DydxConnector:
     def get_historical_trades(
         self, symbol: str, start_dt: datetime, end_dt: datetime
     ) -> list:
-        diff_seconds = (end_dt - start_dt).seconds
+        diff_seconds = int((end_dt - start_dt).total_seconds())
         period_end_dt = end_dt
         period_start_dt = end_dt
         progress_bar = tqdm(range(diff_seconds))

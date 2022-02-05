@@ -2,7 +2,7 @@ import os
 import sys
 import csv
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 sys.path.append("../")
 
@@ -43,8 +43,8 @@ def get_formated_dt(dt: datetime) -> str:
 def main():
     print("collection of trades begin")
     print("it may takes a lot of time")
-    start_dt = datetime(2021, 10, 1)
-    end_dt = datetime(2022, 2, 4)
+    start_dt = datetime(2022, 1, 22)
+    end_dt = datetime.now() - timedelta(hours=3)
     trades_data = get_trades_from_dydx_api(MARKET_ETH_USD, start_dt, end_dt)
     with open(
         f"../data/trades/raw/trades_{get_formated_dt(start_dt)}_{get_formated_dt(end_dt)}.csv",
