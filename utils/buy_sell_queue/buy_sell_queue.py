@@ -5,6 +5,7 @@ from utils.helpful_scripts import string_to_datetime
 
 
 class BuySellQueue:
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, window_interval_td: timedelta, min_side_queue_length: int = None) -> None:
         self.buy_queue = deque()
         self.sell_queue = deque()
@@ -75,13 +76,13 @@ class BuySellQueue:
                 key=lambda trade: float(trade["price"]),
             )["price"]
         )
-    
+
     def get_first_priced_above(self, side: str, price: float) -> dict:
         for trade in self[side]:
             if float(trade["price"]) > price:
                 return trade
         return {}
-    
+
     def get_first_priced_below(self, side: str, price: float) -> dict:
         for trade in self[side]:
             if float(trade["price"]) < price:
