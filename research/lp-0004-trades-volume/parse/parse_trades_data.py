@@ -19,15 +19,19 @@ class DataParser:
     n_trades_ago_list = [1000, 100, 50, 10, 1]
     trade_window_td = timedelta(seconds=600)
     punch_window_td = timedelta(seconds=30)
-    random_data_pc = 0.03
+    random_data_pc = 0.02
     SIDES = ["BUY", "SELL"]
 
     def __init__(self, input_path: str, output_path: str) -> None:
-        self.data = json.load(open(input_path, "r", encoding="utf8"))
-        self.data_it = 0
+        file = open(input_path, "r", encoding="utf8")
+        csvreader = csv.DictReader(file)
+        self.data = list(csvreader)
+        file.close()
+        self.data_it = 1
         self.input_path = input_path
         self.output_path = output_path
         self.progress_bar = tqdm(range(len(self.data)))
+        Indicators.fill_WI_dict()
         self.output_data = []
 
         self.trade_window = None
@@ -150,10 +154,16 @@ class DataParser:
 
 
 def main():
-    input_path = "../../data/trades/raw/trades_01-08-2021_22-01-2022.json"
-    output_path = (
-        "../../data/trades/processed/indicators_01-08-2021_22-01-2022.csv"
-    )
+    date_borders = "01-08-2021_22-01-2022"
+    if len(sys.argv) != 2:
+        input_path = f"../../data/trades/raw/trades_{date_borders}.csv"
+        output_path = (
+            f"../../data/trades/processed/indicators_{date_borders}.csv"
+        )
+    else:
+        input_path = f"../../data/trades/raw/parts_{date_borders}/{int(sys.argv[1])}.csv"
+        output_path = f"../../data/trades/processed/parts_{date_borders}/{int(sys.argv[1])}.csv"
+
     dp = DataParser(input_path, output_path)
     dp.run_and_write()
 
