@@ -13,9 +13,10 @@ from dydx3.constants import NETWORK_ID_MAINNET, WS_HOST_MAINNET, NETWORK_ID_ROPS
 from dydx3.constants import POSITION_STATUS_OPEN
 from dydx3.constants import POSITION_STATUS_CLOSED
 from dydx3.constants import ORDER_TYPE_LIMIT, ORDER_TYPE_MARKET, ORDER_TYPE_TRAILING_STOP
-from dydx3.constants import TIME_IN_FORCE_GTT
+from dydx3.constants import TIME_IN_FORCE_GTT, TIME_IN_FORCE_FOK
 from dydx3.constants import ORDER_STATUS_OPEN
 from dydx3.errors import DydxApiError
+from dydx3.helpers.request_helpers import generate_now_iso
 
 from connectors.dydx.order_book_cache import OrderBookCache
 

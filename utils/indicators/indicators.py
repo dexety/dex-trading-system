@@ -9,6 +9,14 @@ from utils.helpful_scripts import string_to_datetime
 
 
 class Indicators:
+    static_WI_dict = {}
+
+    @staticmethod
+    def fill_WI_dict():
+        for name, indicator in Indicators.__dict__.items():
+            if name[:2] == "WI":
+                Indicators.static_WI_dict[name] = indicator.__func__
+
     @staticmethod
     def fill_target_values(
         indicators_values: dict,
@@ -49,14 +57,10 @@ class Indicators:
         slices_lengths: list,
         n_trades_ago_list: list,
     ) -> None:
-        WI_dict = {}
-        for name, indicator in Indicators.__dict__.items():
-            if name[:2] == "WI":
-                WI_dict[name] = indicator.__func__
-
         indicators_punch_values[
             "seconds-since-midnight"
         ] = Indicators.seconds_since_midnight(queue.common_queue[-1])
+        indicators_punch_values["date"] = string_to_datetime(queue.common_queue[-1]["createdAt"]).date()
 
         for side in ["BUY", "SELL"]:
             for n_trades_ago in n_trades_ago_list:
@@ -68,7 +72,7 @@ class Indicators:
                     side, window_slice_sec
                 )
 
-                for WI_name, WI_function in WI_dict.items():
+                for WI_name, WI_function in Indicators.static_WI_dict.items():
                     column_name = (
                         WI_name + "-" + str(window_slice_sec) + "_sec-" + side
                     )
