@@ -41,7 +41,10 @@ class DataParser:
         first_trade_dt = string_to_datetime(
             self.data[self.data_it]["createdAt"]
         )
-        self.trade_window = BuySellQueue(window_interval_td=self.trade_window_td, min_side_queue_length=max(self.n_trades_ago_list))
+        self.trade_window = BuySellQueue(
+            window_interval_td=self.trade_window_td,
+            min_side_queue_length=max(self.n_trades_ago_list),
+        )
         self.punch_window = BuySellQueue(self.punch_window_td)
         self.set_window_borders(first_trade_dt)
         self.fill_trade_window()
@@ -72,7 +75,8 @@ class DataParser:
             self.trade_window.size()
             and not self.trade_window.is_trade_inside(
                 self.trade_window.common_queue[0]
-            ) and self.trade_window.needs_pop_front()
+            )
+            and self.trade_window.needs_pop_front()
         ):
             self.trade_window.pop_front()
 
@@ -122,7 +126,11 @@ class DataParser:
 
         indicators_values = {}
         Indicators.fill_target_values(
-            indicators_values, self.trade_window, self.punch_window, self.stop_profit, self.stop_loss
+            indicators_values,
+            self.trade_window,
+            self.punch_window,
+            self.stop_profit,
+            self.stop_loss,
         )
 
         if (
@@ -161,7 +169,9 @@ def main():
             f"../../data/trades/processed/indicators_{date_borders}.csv"
         )
     else:
-        input_path = f"../../data/trades/raw/parts_{date_borders}/{int(sys.argv[1])}.csv"
+        input_path = (
+            f"../../data/trades/raw/parts_{date_borders}/{int(sys.argv[1])}.csv"
+        )
         output_path = f"../../data/trades/processed/parts_{date_borders}/{int(sys.argv[1])}.csv"
 
     dp = DataParser(input_path, output_path)

@@ -10,6 +10,7 @@ from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
 from utils.helpful_scripts import string_to_datetime
 
+
 def clean_data(data: list) -> list:
     cleaned_data = []
     cur_dt = string_to_datetime(data[0]["createdAt"])
@@ -18,8 +19,9 @@ def clean_data(data: list) -> list:
         if new_dt >= cur_dt:
             cleaned_data.append(new_trade)
             cur_dt = new_dt
-    
+
     return cleaned_data
+
 
 def get_trades_from_dydx_api(
     symbol: str, start_dt: datetime, end_dt: datetime
@@ -33,7 +35,9 @@ def get_trades_from_dydx_api(
         [symbol],
         INFURA_NODE,
     )
-    return clean_data(dydx_connector_trades.get_historical_trades(symbol, start_dt, end_dt))
+    return clean_data(
+        dydx_connector_trades.get_historical_trades(symbol, start_dt, end_dt)
+    )
 
 
 def get_formated_dt(dt: datetime) -> str:

@@ -6,7 +6,9 @@ from utils.helpful_scripts import string_to_datetime
 
 class BuySellQueue:
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, window_interval_td: timedelta, min_side_queue_length: int = None) -> None:
+    def __init__(
+        self, window_interval_td: timedelta, min_side_queue_length: int = None
+    ) -> None:
         self.buy_queue = deque()
         self.sell_queue = deque()
         self.common_queue = deque()
@@ -36,7 +38,9 @@ class BuySellQueue:
         return self.to_dt >= trade_time >= self.from_dt
 
     def needs_pop_front(self) -> bool:
-        return len(self[self.common_queue[0]["side"]]) > self.min_side_queue_length
+        return (
+            len(self[self.common_queue[0]["side"]]) > self.min_side_queue_length
+        )
 
     def pop_front(self) -> dict:
         if self.size():

@@ -56,10 +56,12 @@ class Indicators:
         n_trades_ago_list: list,
     ) -> None:
 
-        indicators_punch_values["seconds-since-midnight"] = \
-            Indicators.seconds_since_midnight(queue.common_queue[-1])
-        indicators_punch_values["date"] = \
-            string_to_datetime(queue.common_queue[-1]["createdAt"]).date()
+        indicators_punch_values[
+            "seconds-since-midnight"
+        ] = Indicators.seconds_since_midnight(queue.common_queue[-1])
+        indicators_punch_values["date"] = string_to_datetime(
+            queue.common_queue[-1]["createdAt"]
+        ).date()
 
         for side in ["BUY", "SELL"]:
             for n_trades_ago in n_trades_ago_list:
