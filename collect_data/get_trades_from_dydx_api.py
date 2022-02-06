@@ -12,8 +12,12 @@ from utils.helpful_scripts import string_to_datetime
 
 
 def clean_data(data: list) -> list:
-    cleaned_data = [trade for trade in data if trade["createdAt"] >= cur_dt]
-
+    cleaned_data = []
+    cur_dt = string_to_datetime(data[0]["createdAt"])
+    for new_trade in data:
+        new_dt = string_to_datetime(new_trade["createdAt"])
+        if new_dt >= cur_dt:
+            cleaned_data.append(new_trade)
     return cleaned_data
 
 
