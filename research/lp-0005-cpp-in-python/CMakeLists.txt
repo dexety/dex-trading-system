@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
+project("My lib")
+
 # find python and Boost
 find_package(PythonLibs 3.8 REQUIRED)
 find_package(Boost COMPONENTS python REQUIRED)
