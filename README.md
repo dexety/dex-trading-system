@@ -11,9 +11,9 @@ This is a trading system for the DyDx decentralized exchange
 
 ## Python env
 
-Добавьте корень проекта в окрежение, чтобы из любого места проекта можно было импортить любое другое.
+Добавьте корень проекта в окружение, чтобы из любого места проекта можно было импортить любое другое.
 ```bash
-export PYTHONPATH=`pwd`
+export PYTHONPATH=`/path/to/dex-trading-system`
 ```
 
 # Project structure
