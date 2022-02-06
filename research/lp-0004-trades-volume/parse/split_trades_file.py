@@ -3,9 +3,9 @@ import os
 
 date_borders = "01-08-2021_22-01-2022"
 
-raw_parts_dir__path = f"../../data/trades/raw/parts_{date_borders}"
-if not os.path.isdir(raw_parts_dir__path):
-    os.makedirs(raw_parts_dir__path)
+raw_parts_dir_path = f"../../data/trades/raw/parts_{date_borders}"
+if not os.path.isdir(raw_parts_dir_path):
+    os.makedirs(raw_parts_dir_path)
 
 input = open(f"../../data/trades/raw/trades_{date_borders}.csv", "r")
 lines = input.readlines()
