@@ -1,11 +1,7 @@
 import os
-import sys
 import csv
 import json
-from datetime import datetime, timedelta
-
-sys.path.append("../")
-
+from datetime import datetime
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
 from utils.helpful_scripts import string_to_datetime
