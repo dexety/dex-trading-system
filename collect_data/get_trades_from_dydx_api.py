@@ -18,6 +18,7 @@ def clean_data(data: list) -> list:
         new_dt = string_to_datetime(new_trade["createdAt"])
         if new_dt >= cur_dt:
             cleaned_data.append(new_trade)
+        cur_dt = new_dt
     return cleaned_data
 
 
