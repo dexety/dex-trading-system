@@ -12,13 +12,7 @@ from utils.helpful_scripts import string_to_datetime
 
 
 def clean_data(data: list) -> list:
-    cleaned_data = []
-    cur_dt = string_to_datetime(data[0]["createdAt"])
-    for new_trade in data:
-        new_dt = string_to_datetime(new_trade["createdAt"])
-        if new_dt >= cur_dt:
-            cleaned_data.append(new_trade)
-            cur_dt = new_dt
+    cleaned_data = [trade for trade in data if trade['createdAt'] >= cur_dt]
 
     return cleaned_data
 
@@ -48,7 +42,7 @@ def main():
     print("collection of trades begin")
     print("it may takes a lot of time")
     start_dt = datetime(2022, 1, 22)
-    end_dt = datetime.now() - timedelta(hours=3)
+    end_dt = datetime.utcnow()
     trades_data = get_trades_from_dydx_api(MARKET_ETH_USD, start_dt, end_dt)
     with open(
         f"../data/trades/raw/trades_{get_formated_dt(start_dt)}_{get_formated_dt(end_dt)}.csv",

@@ -181,7 +181,7 @@ class Indicators:
         indicators_values: dict, window: list, WI_column_name: str
     ) -> None:
         if not window:
-            indicators_values[WI_column_name] = 1
+            indicators_values[WI_column_name] = 0.5
             return
         indicators_values[WI_column_name] = (
             float(window[-1]["price"])
