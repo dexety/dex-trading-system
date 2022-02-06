@@ -12,7 +12,7 @@ from utils.helpful_scripts import string_to_datetime
 
 
 def clean_data(data: list) -> list:
-    cleaned_data = [trade for trade in data if trade['createdAt'] >= cur_dt]
+    cleaned_data = [trade for trade in data if trade["createdAt"] >= cur_dt]
 
     return cleaned_data
 
