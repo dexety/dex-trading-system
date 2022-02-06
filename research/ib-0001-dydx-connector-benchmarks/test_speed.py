@@ -1,9 +1,5 @@
 import os
-import sys
-
 from dydx3.constants import MARKET_ETH_USD, ORDER_SIDE_BUY
-
-sys.path.append("../../")
 from connectors.dydx.connector import DydxConnector
 from speed_measure_class import SpeedMeasure
 

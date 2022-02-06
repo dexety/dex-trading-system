@@ -1,8 +1,4 @@
 import os
-import sys
-
-sys.path.append("../")
-
 from connectors.uniswap.connector import L1PoolConnector
 
 ETH_KEY = os.getenv("ETH_ADDRESS")

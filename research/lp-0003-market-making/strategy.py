@@ -1,15 +1,10 @@
 import os
-import sys
 import time
 import argparse
 from functools import wraps
 from threading import Thread, Lock
 from datetime import datetime, timedelta
-
 from dydx3.errors import DydxApiError
-
-sys.path.append("../../")
-
 from connectors.dydx.connector import DydxConnector, safe_execute
 from connectors.dydx.order_book_cache import OrderBookCache
 from utils.logger.logger import Logger

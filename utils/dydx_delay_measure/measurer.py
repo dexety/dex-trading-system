@@ -1,18 +1,14 @@
 import os
-import sys
 from datetime import datetime
 import json
 import time
 import asyncio
 import threading
 import websockets
-
 from dydx3.constants import MARKET_ETH_USD
 from dydx3.constants import ORDER_SIDE_BUY
 from dydx3.constants import WS_HOST_MAINNET
 from dydx3.helpers.request_helpers import generate_now_iso
-
-sys.path.append("../../")
 from connectors.dydx.connector import DydxConnector
 
 

@@ -14,10 +14,9 @@
         missing-module-docstring,
         missing-class-docstring,
         missing-function-docstring,
-        wrong-import-position,
         broad-except,
-        import-error,
         no-member,
+        logging-not-lazy,
         no-name-in-module,
-        relative-beyond-top-level,
+        import-error,
     '''
