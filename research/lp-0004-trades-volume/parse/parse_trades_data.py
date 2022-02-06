@@ -1,12 +1,9 @@
+import sys
 import os
 import csv
-import sys
 from datetime import datetime, timedelta
 import numpy as np
 from tqdm import tqdm
-
-sys.path.append("../../")
-
 from utils.indicators.indicators import Indicators
 from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
 from utils.helpful_scripts import string_to_datetime

@@ -2,9 +2,6 @@ import os
 import sys
 import pandas as pd
 from datetime import datetime
-
-sys.path.append("../")
-
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
 from utils.helpful_scripts import string_to_datetime

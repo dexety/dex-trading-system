@@ -1,10 +1,7 @@
-import sys
 import json
 from collections import deque
 from datetime import datetime, timedelta
 import numpy as np
-
-sys.path.append("../../")
 from connectors.dydx.order_book_cache import OrderBookCache
 
 symbol = "ETH-USD"
