@@ -1,4 +1,4 @@
-import json
+import os
 import csv
 import sys
 from datetime import datetime, timedelta
@@ -23,18 +23,17 @@ class DataParser:
     SIDES = ["BUY", "SELL"]
 
     def __init__(self, input_path: str, output_path: str) -> None:
-        file = open(input_path, "r", encoding="utf8")
-        csvreader = csv.DictReader(file)
-        self.data = list(csvreader)
-        file.close()
+        with open(input_path, "r", encoding="utf8") as input_file:
+            self.data = list(csv.DictReader(input_file))
         self.data_it = 1
-        self.input_path = input_path
-        self.output_path = output_path
-        self.progress_bar = tqdm(range(len(self.data)))
-        Indicators.fill_WI_dict()
+
+        self.output_file = open(output_path, "w")
         self.output_data = []
 
-        self.trade_window = None
+        self.progress_bar = tqdm(range(len(self.data)))
+
+        Indicators.fill_WI_dict()
+
         self.init_windows()
 
     def init_windows(self) -> None:
@@ -150,10 +149,10 @@ class DataParser:
 
     def write_data(self) -> None:
         field_names = list(self.output_data[0].keys())
-        with open(self.output_path, "w") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=field_names)
-            writer.writeheader()
-            writer.writerows(self.output_data)
+        writer = csv.DictWriter(self.output_file, fieldnames=field_names)
+        writer.writeheader()
+        writer.writerows(self.output_data)
+        self.output_file.close()
 
     def run_and_write(self) -> None:
         while self.data_it < len(self.data):
@@ -169,10 +168,16 @@ def main():
             f"../../data/trades/processed/indicators_{date_borders}.csv"
         )
     else:
+        raw_parts_dir__path = f"../../data/trades/raw/parts_{date_borders}"
+        processed_parts_dir__path = f"../../data/trades/processed/parts_{date_borders}"
+
+        if not os.path.isdir(processed_parts_dir__path):
+            os.makedirs(processed_parts_dir__path)
+
         input_path = (
-            f"../../data/trades/raw/parts_{date_borders}/{int(sys.argv[1])}.csv"
+            f"{raw_parts_dir__path}/{int(sys.argv[1])}.csv"
         )
-        output_path = f"../../data/trades/processed/parts_{date_borders}/{int(sys.argv[1])}.csv"
+        output_path = f"{processed_parts_dir__path}/{int(sys.argv[1])}.csv"
 
     dp = DataParser(input_path, output_path)
     dp.run_and_write()
