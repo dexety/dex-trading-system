@@ -169,14 +169,14 @@ def main():
         )
     else:
         raw_parts_dir__path = f"../../data/trades/raw/parts_{date_borders}"
-        processed_parts_dir__path = f"../../data/trades/processed/parts_{date_borders}"
+        processed_parts_dir__path = (
+            f"../../data/trades/processed/parts_{date_borders}"
+        )
 
         if not os.path.isdir(processed_parts_dir__path):
             os.makedirs(processed_parts_dir__path)
 
-        input_path = (
-            f"{raw_parts_dir__path}/{int(sys.argv[1])}.csv"
-        )
+        input_path = f"{raw_parts_dir__path}/{int(sys.argv[1])}.csv"
         output_path = f"{processed_parts_dir__path}/{int(sys.argv[1])}.csv"
 
     dp = DataParser(input_path, output_path)
