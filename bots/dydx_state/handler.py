@@ -1,12 +1,8 @@
 import os
-import sys
 import json
 import asyncio
 from telebot import TeleBot
 from telebot.types import Message
-
-sys.path.append("../../")
-
 from connectors.dydx.connector import DydxConnector
 
 TOKEN = os.getenv("LLV_DYDX")

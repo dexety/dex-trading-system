@@ -1,15 +1,10 @@
 import json
 import os
-import sys
 import asyncio
 import websockets
-
 from telebot import TeleBot
 from dydx3.constants import WS_HOST_MAINNET
 from dydx3.helpers.request_helpers import generate_now_iso
-
-sys.path.append("../../")
-
 from connectors.dydx.connector import DydxConnector
 
 

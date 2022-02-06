@@ -1,6 +1,6 @@
 import asyncio
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from binance import AsyncClient, Client, BinanceSocketManager
 from binance.enums import TIME_IN_FORCE_GTC, TIME_IN_FORCE_IOC, ORDER_TYPE_LIMIT
@@ -100,7 +100,7 @@ class BinanceConnector:
         return balances
 
     def send_limit_order(self, *, symbol, side, price, quantity, our_id):
-        Logger.debug(
+        Logger.info(
             "send limit order: symbol: "
             + symbol
             + " side: "
@@ -123,7 +123,7 @@ class BinanceConnector:
         )
 
     def send_ioc_order(self, *, symbol, side, price, quantity, our_id):
-        Logger.debug(
+        Logger.info(
             "send ioc order: symbol: "
             + symbol
             + " side: "
@@ -146,7 +146,7 @@ class BinanceConnector:
         )
 
     def cancel_order(self, symbol, our_id):
-        Logger.debug(
+        Logger.info(
             "canceled order: symbol: " + symbol + " our_id: " + str(our_id)
         )
         self.sync_client.cancel_order(
@@ -186,7 +186,7 @@ class BinanceConnector:
         current_start_timestamp = dt_to_ms_timestamp(start_dt) + time_bias
         end_timestamp = dt_to_ms_timestamp(end_dt) + time_bias
         while current_start_timestamp < end_timestamp:
-            Logger.debug(
+            Logger.info(
                 "binance::get_historical_aggregated_trades "
                 + str(current_start_timestamp)
                 + " "
@@ -268,9 +268,9 @@ class BinanceConnector:
 
         multiplex_socket = binance_manager.futures_multiplex_socket(streams)
 
-        stop_time = datetime.now() + self.run_duration
+        stop_time = datetime.utcnow() + self.run_duration
         async with multiplex_socket as msm_socket:
-            while datetime.now() < stop_time:
+            while datetime.utcnow() < stop_time:
                 update = await msm_socket.recv()
                 try:
                     stream = update["stream"]
@@ -281,13 +281,12 @@ class BinanceConnector:
                         trade["price"] = float(update["data"]["p"])
                         trade["createdAt"] = (
                             datetime.fromtimestamp(update["data"]["E"] / 1000)
-                            - timedelta(hours=3)
                         ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                         trade["exchange"] = "binance"
                         trade["symbol"] = update["data"]["s"]
-                        trade["recieveTime"] = (
-                            datetime.now() - timedelta(hours=3)
-                        ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                        trade["recieveTime"] = (datetime.utcnow()).strftime(
+                            "%Y-%m-%dT%H:%M:%S.%fZ"
+                        )
                         self._call_trade_listeners(trade)
                     elif stream.endswith("depth"):
                         self._call_order_book_listeners(update["data"])

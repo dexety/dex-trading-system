@@ -1,8 +1,7 @@
 import json
 from threading import Thread
-
-from .handler import run_handler
-from .sender import run_sender
+from handler import run_handler
+from sender import run_sender
 
 
 def init_users_data():

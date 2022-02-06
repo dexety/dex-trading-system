@@ -1,10 +1,7 @@
-import sys
 import argparse
 import json
 from collections import deque
 from datetime import datetime, timedelta
-
-sys.path.append("../../")
 from connectors.dydx.order_book_cache import OrderBookCache
 
 parser = argparse.ArgumentParser(description="Ping script")
