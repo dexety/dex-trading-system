@@ -7,7 +7,7 @@ from connectors.dydx.connector import DydxConnector
 
 sys.path.append("../../")
 
-from base.logger import Logger
+from utils.logger.logger import Logger
 from my_queue import Queue
 from connectors.binance.connector import BinanceConnector
 from datetime import datetime

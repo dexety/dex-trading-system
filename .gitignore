@@ -4,7 +4,6 @@ venv
 __pycache__
 *.sqlite3
 .DS_Store
-data/
 *.json
 *.csv
 *.history
@@ -12,3 +11,6 @@ data/
 *build/
 *reports/
 *.env
+*catboost_info
+*.dump
+*.ipynb_checkpoints/

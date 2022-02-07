@@ -28,12 +28,20 @@ contract SwapExamples {
     address public constant WETH9 = 0xc778417E063141139Fce010982780140Aa0cD5Ab;
 
     // For this example, we will set the pool fee to 0.3%.
-    uint24 public constant poolFee = 3000;
-
+    uint24 public poolFee = 3000;
+    
     constructor(ISwapRouter _swapRouter) {
         swapRouter = _swapRouter;
     }
 
+    function changePoolFee(uint24 _poolFee) external {
+        require(
+            _poolFee == 500 || _poolFee == 3000 || _poolFee == 10000,
+            "New pool fee is incorrect"
+        );
+        poolFee = _poolFee;
+    }
+    
     /// @notice swapExactInputSingle swaps a fixed amount of DAI for a maximum possible amount of WETH9
     /// using the DAI/WETH9 0.3% pool by calling `exactInputSingle` in the swap router.
     /// @dev The calling address must approve this contract to spend at least `amountIn` worth of its DAI for this function to succeed.

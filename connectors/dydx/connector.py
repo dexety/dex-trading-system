@@ -5,6 +5,7 @@ from typing import Callable
 from functools import wraps
 import websockets
 from web3 import Web3
+from tqdm import tqdm
 
 from dydx3 import Client
 from dydx3.helpers.request_helpers import generate_now_iso
@@ -187,6 +188,32 @@ class DydxConnector:
     @safe_execute
     def cancel_all_orders(self) -> None:
         return self.sync_client.private.cancel_all_orders()
+
+    @safe_execute
+    def get_historical_trades(
+        self, symbol: str, start_dt: datetime, end_dt: datetime
+    ) -> list:
+        diff_seconds = int((end_dt - start_dt).total_seconds())
+        period_end_dt = end_dt
+        period_start_dt = end_dt
+        progress_bar = tqdm(range(diff_seconds))
+        trades = []
+        while period_end_dt > start_dt:
+            trades.extend(
+                self.sync_client.public.get_trades(symbol, period_end_dt)[
+                    "trades"
+                ]
+            )
+            period_start_dt = datetime.strptime(
+                trades[-1]["createdAt"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+            progress_bar.update(
+                int((period_end_dt - period_start_dt).total_seconds())
+            )
+            period_end_dt = period_start_dt
+
+        trades.reverse()
+        return trades
 
     async def subscribe_and_recieve(self) -> None:
         async with websockets.connect(WS_HOST_MAINNET) as websocket:

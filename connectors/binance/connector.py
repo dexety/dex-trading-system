@@ -6,7 +6,7 @@ from binance import AsyncClient, Client, BinanceSocketManager
 from binance.enums import TIME_IN_FORCE_GTC, TIME_IN_FORCE_IOC, ORDER_TYPE_LIMIT
 
 from depth_cache import DepthCache
-from base.logger import Logger
+from utils.logger.logger import Logger
 
 
 def dt_to_ms_timestamp(date_time: datetime):
