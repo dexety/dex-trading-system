@@ -1,4 +1,4 @@
-import json
+import csv
 from collections import deque
 from datetime import datetime, timedelta
 from sortedcontainers import SortedDict
@@ -15,7 +15,7 @@ class TradesSize:
     punch_plot = SortedDict()
 
     def __init__(self, path: str) -> None:
-        self.data = json.load(open(path, "r", encoding="utf8"))[:100000]
+        self.data = list(csv.DictReader(open(path, "r", encoding="utf8")))[:100]
         self.set_trades_window()
         self.set_punch_window()
 
@@ -127,9 +127,7 @@ class TradesSize:
 
 
 def main():
-    ts = TradesSize(
-        "../../data/raw/trades/trades-2021_12_1_0_0_0-2021_12_21_0_0_0.json"
-    )
+    ts = TradesSize("../../data/trades/raw/trades_01-08-2021_22-01-2022.csv")
     ts.run()
     ts.plot()
 

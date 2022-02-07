@@ -1,3 +1,4 @@
+import sys
 import os
 import csv
 from datetime import datetime, timedelta
@@ -9,7 +10,7 @@ from utils.helpful_scripts import string_to_datetime
 
 
 class DataParser:
-    stop_profit = 0.002
+    stop_profit = 0.003
     stop_loss = 0.001
     trade_window_slices_sec = [600, 60, 30, 10, 5]
     n_trades_ago_list = [1000, 100, 50, 10, 1]
@@ -109,15 +110,17 @@ class DataParser:
         self.move_from_punch_window_to_trade_window()
         self.clean_trade_window()
 
-    def add_result(self) -> None:
+    def add_result(self) -> bool:
+        """returns true if stoploss or stopprofit reached, false otherwise (no punch or not enough trades in queue)"""
         if (
             not self.punch_window["SELL"]
             or not self.punch_window["BUY"]
-            or not self.trade_window["SELL"]
-            or not self.trade_window["BUY"]
+            or len(self.trade_window["SELL"])
+            < self.trade_window.min_side_queue_length
+            or len(self.trade_window["BUY"])
+            < self.trade_window.min_side_queue_length
         ):
-            self.update_windows_no_punch()
-            return
+            return False
 
         indicators_values = {}
         Indicators.fill_target_values(
@@ -139,9 +142,9 @@ class DataParser:
                 self.n_trades_ago_list,
             )
             self.output_data.append(indicators_values)
-            self.update_windows_after_punch()
-        else:
-            self.update_windows_no_punch()
+            return True
+
+        return False
 
     def write_data(self) -> None:
         field_names = list(self.output_data[0].keys())
@@ -152,7 +155,10 @@ class DataParser:
 
     def run_and_write(self) -> None:
         while self.data_it < len(self.data):
-            self.add_result()
+            if self.add_result():
+                self.update_windows_after_punch()
+            else:
+                self.update_windows_no_punch()
         self.write_data()
 
 
@@ -169,11 +175,11 @@ def main():
             f"../../data/trades/processed/parts_{date_borders}"
         )
 
-        if not os.path.isdir(processed_parts_dir__path):
-            os.makedirs(processed_parts_dir__path)
+        if not os.path.isdir(processed_parts_dir_path):
+            os.makedirs(processed_parts_dir_path)
 
         input_path = f"{raw_parts_dir_path}/{int(sys.argv[1])}.csv"
-        output_path = f"{processed_parts_dir__path}/{int(sys.argv[1])}.csv"
+        output_path = f"{processed_parts_dir_path}/{int(sys.argv[1])}.csv"
 
     dp = DataParser(input_path, output_path)
     dp.run_and_write()
