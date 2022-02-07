@@ -14,6 +14,7 @@ def dt_to_ms_timestamp(date_time: datetime):
 
 
 class BinanceConnector:
+    # pylint: disable=logging-fstring-interpolation
     depth_caches = {}
     symbol_infos = {}
     run_duration = 0
@@ -101,16 +102,12 @@ class BinanceConnector:
 
     def send_limit_order(self, *, symbol, side, price, quantity, our_id):
         Logger.debug(
-            "send limit order: symbol: "
-            + symbol
-            + " side: "
-            + side
-            + " price: "
-            + str(price)
-            + " quantity: "
-            + str(quantity)
-            + " our_id: "
-            + str(our_id)
+            f"send limit order: \
+                symbol: {symbol} \
+                side: {side} \
+                price: {str(price)} \
+                quantity: {str(quantity)} \
+                our_id: {str(our_id)}"
         )
         self.sync_client.create_order(
             symbol=symbol,
@@ -124,16 +121,12 @@ class BinanceConnector:
 
     def send_ioc_order(self, *, symbol, side, price, quantity, our_id):
         Logger.debug(
-            "send ioc order: symbol: "
-            + symbol
-            + " side: "
-            + side
-            + " price: "
-            + str(price)
-            + " quantity: "
-            + str(quantity)
-            + " our_id: "
-            + str(our_id)
+            f"send ioc order: \
+                symbol: {symbol} \
+                side: {side} \
+                price: {str(price)} \
+                quantity: {str(quantity)} \
+                our_id: {str(our_id)}"
         )
         self.sync_client.create_order(
             symbol=symbol,
@@ -146,9 +139,7 @@ class BinanceConnector:
         )
 
     def cancel_order(self, symbol, our_id):
-        Logger.debug(
-            "canceled order: symbol: " + symbol + " our_id: " + str(our_id)
-        )
+        Logger.debug(f"canceled order: symbol: {symbol} our_id: {str(our_id)}")
         self.sync_client.cancel_order(
             symbol=symbol, origClientOrderId=str(our_id)
         )
@@ -187,10 +178,9 @@ class BinanceConnector:
         end_timestamp = dt_to_ms_timestamp(end_dt) + time_bias
         while current_start_timestamp < end_timestamp:
             Logger.debug(
-                "binance::get_historical_aggregated_trades "
-                + str(current_start_timestamp)
-                + " "
-                + str(end_timestamp)
+                f"binance::get_historical_aggregated_trades \
+                    start timestamp: {str(current_start_timestamp)} \
+                    end timestamp: {str(end_timestamp)}"
             )
             aggregated_trades = self.sync_client.futures_aggregate_trades(
                 symbol=symbol,
@@ -264,7 +254,7 @@ class BinanceConnector:
                 ]
             )
 
-        Logger.info("subscribe for exchange data streams: " + str(streams))
+        Logger.info(f"subscribe for exchange data streams: {str(streams)}")
 
         multiplex_socket = binance_manager.futures_multiplex_socket(streams)
 
@@ -292,13 +282,10 @@ class BinanceConnector:
                     elif stream.endswith("depth"):
                         self._call_order_book_listeners(update["data"])
                     else:
-                        Logger.error("unknown message:" + update)
+                        Logger.error(f"unknown message: {update}")
                 except Exception as error:
                     Logger.error(
-                        "exchange data exception: "
-                        + str(error)
-                        + " traceback: "
-                        + traceback.format_exc()
+                        f"exchange data exception: {str(error)} traceback: {traceback.format_exc()}"
                     )
 
     @staticmethod

@@ -127,9 +127,7 @@ class TradesSize:
 
 
 def main():
-    ts = TradesSize(
-        "../../data/trades/raw/trades_01-08-2021_22-01-2022.csv"
-    )
+    ts = TradesSize("../../data/trades/raw/trades_01-08-2021_22-01-2022.csv")
     ts.run()
     ts.plot()
 
