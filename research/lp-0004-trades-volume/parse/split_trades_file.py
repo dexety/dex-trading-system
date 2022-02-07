@@ -11,9 +11,9 @@ if not os.path.isdir(raw_parts_dir_path):
 parts_amount = int(sys.argv[1])
 
 with open(f"../../data/trades/raw/trades_{date_borders}.csv", "r") as input:
-    lines = input.readlines()
-    fieldnames = lines[0]
-    trades = lines[1:]
+    trades = input.readlines()
+    fieldnames = trades[0]
+    del trades[0]
 
 
 for i in range(parts_amount):

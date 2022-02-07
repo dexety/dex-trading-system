@@ -102,12 +102,12 @@ class BinanceConnector:
 
     def send_limit_order(self, *, symbol, side, price, quantity, our_id):
         Logger.debug(
-            f"send limit order: \
-                symbol: {symbol} \
-                side: {side} \
-                price: {str(price)} \
-                quantity: {str(quantity)} \
-                our_id: {str(our_id)}"
+            f"""send limit order:
+                symbol: {symbol}
+                side: {side}
+                price: {str(price)}
+                quantity: {str(quantity)}
+                our_id: {str(our_id)}"""
         )
         self.sync_client.create_order(
             symbol=symbol,
@@ -121,12 +121,12 @@ class BinanceConnector:
 
     def send_ioc_order(self, *, symbol, side, price, quantity, our_id):
         Logger.debug(
-            f"send ioc order: \
-                symbol: {symbol} \
-                side: {side} \
-                price: {str(price)} \
-                quantity: {str(quantity)} \
-                our_id: {str(our_id)}"
+            f"""send ioc order:
+                symbol: {symbol}
+                side: {side}
+                price: {str(price)}
+                quantity: {str(quantity)}
+                our_id: {str(our_id)}"""
         )
         self.sync_client.create_order(
             symbol=symbol,
@@ -178,9 +178,9 @@ class BinanceConnector:
         end_timestamp = dt_to_ms_timestamp(end_dt) + time_bias
         while current_start_timestamp < end_timestamp:
             Logger.debug(
-                f"binance::get_historical_aggregated_trades \
-                    start timestamp: {str(current_start_timestamp)} \
-                    end timestamp: {str(end_timestamp)}"
+                f"""binance::get_historical_aggregated_trades
+                    start timestamp: {str(current_start_timestamp)}
+                    end timestamp: {str(end_timestamp)}"""
             )
             aggregated_trades = self.sync_client.futures_aggregate_trades(
                 symbol=symbol,
