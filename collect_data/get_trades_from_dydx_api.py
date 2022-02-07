@@ -2,12 +2,10 @@ import os
 import sys
 import pandas as pd
 from datetime import datetime
-
-sys.path.append("../")
-
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
 from utils.helpful_scripts import string_to_datetime
+
 
 def get_trades_from_dydx_api(
     symbol: str, start_dt: datetime, end_dt: datetime
@@ -21,8 +19,10 @@ def get_trades_from_dydx_api(
         [symbol],
         INFURA_NODE,
     )
-    
-    return pd.DataFrame(dydx_connector_trades.get_historical_trades(symbol, start_dt, end_dt))
+
+    return pd.DataFrame(
+        dydx_connector_trades.get_historical_trades(symbol, start_dt, end_dt)
+    )
 
 
 def get_formated_dt(dt: datetime) -> str:
@@ -34,7 +34,9 @@ def main():
     print("***It may take a lot of time***")
     start_dt = datetime(2022, 2, 7, 15)
     end_dt = datetime.utcnow()
-    trades:pd.DataFrame = get_trades_from_dydx_api(MARKET_ETH_USD, start_dt, end_dt)
+    trades: pd.DataFrame = get_trades_from_dydx_api(
+        MARKET_ETH_USD, start_dt, end_dt
+    )
 
     print("Trades collected.")
     print("Cleaning initiated...")
@@ -47,7 +49,10 @@ def main():
         else:
             cur_dt = new_dt
         if i % 100000 == 0:
-            print(f"\r{str(i * 100 / trades.shape[0])}% cleaned. {len(trades_to_drop)} redundant trades found", end='')
+            print(
+                f"\r{str(i * 100 / trades.shape[0])}% cleaned. {len(trades_to_drop)} redundant trades found",
+                end="",
+            )
 
     trades = trades.drop(axis=0, index=trades_to_drop)
 

@@ -1,12 +1,9 @@
+import sys
 import os
 import csv
-import sys
 from datetime import datetime, timedelta
 import numpy as np
 from tqdm import tqdm
-
-sys.path.append("../../")
-
 from utils.indicators.indicators import Indicators
 from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
 from utils.helpful_scripts import string_to_datetime
@@ -118,8 +115,10 @@ class DataParser:
         if (
             not self.punch_window["SELL"]
             or not self.punch_window["BUY"]
-            or len(self.trade_window["SELL"]) < self.trade_window.min_side_queue_length
-            or len(self.trade_window["BUY"]) < self.trade_window.min_side_queue_length
+            or len(self.trade_window["SELL"])
+            < self.trade_window.min_side_queue_length
+            or len(self.trade_window["BUY"])
+            < self.trade_window.min_side_queue_length
         ):
             return False
 
@@ -171,16 +170,16 @@ def main():
             f"../../data/trades/processed/indicators_{date_borders}.csv"
         )
     else:
-        raw_parts_dir__path = f"../../data/trades/raw/parts_{date_borders}"
-        processed_parts_dir__path = (
+        raw_parts_dir_path = f"../../data/trades/raw/parts_{date_borders}"
+        processed_parts_dir_path = (
             f"../../data/trades/processed/parts_{date_borders}"
         )
 
-        if not os.path.isdir(processed_parts_dir__path):
-            os.makedirs(processed_parts_dir__path)
+        if not os.path.isdir(processed_parts_dir_path):
+            os.makedirs(processed_parts_dir_path)
 
-        input_path = f"{raw_parts_dir__path}/{int(sys.argv[1])}.csv"
-        output_path = f"{processed_parts_dir__path}/{int(sys.argv[1])}.csv"
+        input_path = f"{raw_parts_dir_path}/{int(sys.argv[1])}.csv"
+        output_path = f"{processed_parts_dir_path}/{int(sys.argv[1])}.csv"
 
     dp = DataParser(input_path, output_path)
     dp.run_and_write()
