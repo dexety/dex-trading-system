@@ -3,7 +3,6 @@ from random import randint
 import json
 import sys
 import time
-import argparse
 from functools import wraps
 from collections import deque
 from threading import Thread, Lock
@@ -12,12 +11,11 @@ from datetime import datetime, timedelta
 from dydx3.errors import DydxApiError
 from dydx3.constants import MARKET_BTC_USD, MARKET_ETH_USD, ORDER_SIDE_BUY, ORDER_SIDE_SELL
 
-sys.path.append("../../")
-
-from connectors.dydx.connector import DydxConnector, safe_execute
-from indicator_funcs import Indicators
+from connectors.dydx.connector import DydxConnector
+from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
+from utils.indicators.indicators import Indicators
 from connectors.dydx.order_book_cache import OrderBookCache
-from base.logger import Logger
+from utils.logger.logger import Logger
 
 
 class MLArbitrage:
@@ -25,24 +23,26 @@ class MLArbitrage:
     ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
     INFURA_NODE = os.getenv("INFURA_NODE")
 
-    update_interval_sec = 60
-    window_parts = 10
     eth_trading_budget = 0.01
+    trade_window_slices_sec = [600, 60, 30, 10, 5]
+    n_trades_ago_list = [1000, 100, 50, 10, 1]
+    min_side_queue_length = max(n_trades_ago_list)
+    trade_window_td = timedelta(seconds=600)
+    punch_window_td = timedelta(seconds=30)
+
     slippage = 0.02
     symbol = MARKET_ETH_USD
 
-    indicator_funcs = Indicators.get_all_indicators()
-    indicator_data = {}
-    trade_window = deque()
+    features_values = {}
+
     recieved_trades = []
-    latest_prices = {}
-
-    eth_current_balance = 0
-    usd_current_balance = 20
-
     trading_lock = Lock()
 
     def __init__(self) -> None:
+        self.trade_window = BuySellQueue(
+            window_interval_td=self.trade_window_td,
+            min_side_queue_length=self.min_side_queue_length
+        )
         self.connector = DydxConnector(
             self.ETH_ADDRESS,
             self.ETH_PRIVATE_KEY,
@@ -75,13 +75,15 @@ class MLArbitrage:
                 continue
 
             for trade in self.recieved_trades:
-                self.trade_window.append(trade)
-                self.latest_prices[trade["side"]] = trade["price"]
+                self.trade_window.push_back(trade)
+            
+            if len(self.trade_window["BUY"]) < self.min_side_queue_length or \
+                len(self.trade_window["SELL"]) < self.min_side_queue_length:
+                continue
 
             self.recieved_trades.clear()
 
-            self.correct_trade_window()
-            self.count_indicators()
+            Indicators.fill_features_values(self.features_values, self.trade_window, self.trade_window_slices_sec, self.n_trades_ago_list)
 
             prediction = self.predict()
 
@@ -89,40 +91,7 @@ class MLArbitrage:
                 continue
             elif prediction == 1:
                 self.buy()
-            elif prediction == -1:
-                self.sell()
 
-    def count_indicators(self) -> None:
-        for sec in range(
-            self.update_interval_sec // self.window_parts,
-            self.update_interval_sec + 1,
-            self.update_interval_sec // self.window_parts,
-        ):
-            filtered_window = list(
-                filter(
-                    lambda trade: self.get_datetime(
-                        self.trade_window[-1]["createdAt"]
-                    )
-                    - self.get_datetime(trade["createdAt"])
-                    <= timedelta(seconds=sec),
-                    self.trade_window,
-                )
-            )
-
-            for indicator in self.indicator_funcs:
-                self.indicator_data[
-                    indicator + "-" + str(sec)
-                ] = self.indicator_funcs[indicator](filtered_window)
-
-    def correct_trade_window(self) -> None:
-        last_trade_time = self.get_datetime(self.trade_window[-1]["createdAt"])
-        while (
-            self.get_datetime(self.trade_window[0]["createdAt"])
-            + timedelta(seconds=self.update_interval_sec)
-            < last_trade_time
-        ):
-            self.trade_window.popleft()
-        
 
     def predict(self) -> int:
         # TODO
@@ -131,7 +100,7 @@ class MLArbitrage:
         # this function predicts, if the price of ETH in USD wil go up (returns 1),
         # down (-1) or will roughly remain the same (0)
 
-        print(json.dumps(self.indicator_data, indent=4))
+        print(json.dumps(self.features_values, indent=4))
         return randint(-1, 1)
 
     def lock_trade(self, function):
