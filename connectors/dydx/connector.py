@@ -128,21 +128,6 @@ class DydxConnector:
             positions = self.sync_client.private.get_positions(status=status)
         return positions
 
-    def get_historical_trades(self, symbol, start_dt, end_dt, debug_info=False):
-        trades = []
-        while end_dt > start_dt:
-            trades.extend(
-                self.sync_client.public.get_trades(symbol, end_dt)["trades"]
-            )
-            end_dt = datetime.strptime(
-                trades[-1]["createdAt"], "%Y-%m-%dT%H:%M:%S.%fZ"
-            )
-            if debug_info:
-                print(end_dt, "->", start_dt)
-
-        trades.reverse()
-        return trades
-
     @safe_execute
     def send_limit_order(
         self, *, symbol, side, price, quantity, cancel_id=None
