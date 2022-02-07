@@ -15,7 +15,6 @@ with open(f"../../data/trades/raw/trades_{date_borders}.csv", "r") as input:
     trades = lines[1:]
 
 
-
 for i in range(parts_amount):
     with open(
         f"../../data/trades/raw/parts_{date_borders}/{i}.csv", "w"

@@ -118,8 +118,10 @@ class DataParser:
         if (
             not self.punch_window["SELL"]
             or not self.punch_window["BUY"]
-            or len(self.trade_window["SELL"]) < self.trade_window.min_side_queue_length
-            or len(self.trade_window["BUY"]) < self.trade_window.min_side_queue_length
+            or len(self.trade_window["SELL"])
+            < self.trade_window.min_side_queue_length
+            or len(self.trade_window["BUY"])
+            < self.trade_window.min_side_queue_length
         ):
             return False
 
