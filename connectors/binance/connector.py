@@ -1,6 +1,6 @@
 import asyncio
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from binance import AsyncClient, Client, BinanceSocketManager
 from binance.enums import TIME_IN_FORCE_GTC, TIME_IN_FORCE_IOC, ORDER_TYPE_LIMIT
@@ -258,9 +258,9 @@ class BinanceConnector:
 
         multiplex_socket = binance_manager.futures_multiplex_socket(streams)
 
-        stop_time = datetime.now() + self.run_duration
+        stop_time = datetime.utcnow() + self.run_duration
         async with multiplex_socket as msm_socket:
-            while datetime.now() < stop_time:
+            while datetime.utcnow() < stop_time:
                 update = await msm_socket.recv()
                 try:
                     stream = update["stream"]
@@ -271,13 +271,12 @@ class BinanceConnector:
                         trade["price"] = float(update["data"]["p"])
                         trade["createdAt"] = (
                             datetime.fromtimestamp(update["data"]["E"] / 1000)
-                            - timedelta(hours=3)
                         ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                         trade["exchange"] = "binance"
                         trade["symbol"] = update["data"]["s"]
-                        trade["recieveTime"] = (
-                            datetime.now() - timedelta(hours=3)
-                        ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                        trade["recieveTime"] = (datetime.utcnow()).strftime(
+                            "%Y-%m-%dT%H:%M:%S.%fZ"
+                        )
                         self._call_trade_listeners(trade)
                     elif stream.endswith("depth"):
                         self._call_order_book_listeners(update["data"])

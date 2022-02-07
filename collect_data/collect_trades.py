@@ -1,11 +1,7 @@
 import os
-import sys
 import json
 import argparse
 from datetime import datetime
-
-sys.path.append("../")
-
 from connectors.dydx.connector import DydxConnector
 
 ETH_ADDRESS = os.getenv("ETH_ADDRESS")

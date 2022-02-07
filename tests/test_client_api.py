@@ -1,11 +1,6 @@
-import sys
 import os
 from datetime import datetime, timedelta
-
 from dydx3.constants import MARKET_BTC_USD, MARKET_ETH_USD, ORDER_SIDE_BUY
-
-sys.path.append("../")
-
 from connectors.dydx.connector import DydxConnector, safe_execute
 
 ETH_KEY = os.getenv("ETH_ADDRESS")
