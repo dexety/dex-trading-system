@@ -41,9 +41,9 @@ def main():
     print("Trades collected.")
     print("Cleaning initiated...")
     trades_to_drop = []
-    cur_dt = string_to_datetime(trades.iloc[0, 3])
+    cur_dt = string_to_datetime(trades.iloc[0].createdAt)
     for i in range(trades.shape[0]):
-        new_dt = string_to_datetime(trades.iloc[i, 3])
+        new_dt = string_to_datetime(trades.iloc[i].createdAt)
         if new_dt < cur_dt:
             trades_to_drop.append(i)
         else:
