@@ -80,15 +80,3 @@ class BuySellQueue:
                 key=lambda trade: float(trade["price"]),
             )["price"]
         )
-
-    def get_first_priced_above(self, side: str, price: float) -> dict:
-        for trade in self[side]:
-            if float(trade["price"]) > price:
-                return trade
-        return {}
-
-    def get_first_priced_below(self, side: str, price: float) -> dict:
-        for trade in self[side]:
-            if float(trade["price"]) < price:
-                return trade
-        return {}

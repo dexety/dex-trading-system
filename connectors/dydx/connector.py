@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+import os
 import asyncio
 from typing import Callable
 from functools import wraps
@@ -8,12 +9,18 @@ from web3 import Web3
 from tqdm import tqdm
 
 from dydx3 import Client
-from dydx3.constants import API_HOST_MAINNET, TIME_IN_FORCE_IOC, API_HOST_ROPSTEN
-from dydx3.constants import NETWORK_ID_MAINNET, WS_HOST_MAINNET, NETWORK_ID_ROPSTEN, WS_HOST_ROPSTEN
-from dydx3.constants import POSITION_STATUS_OPEN
-from dydx3.constants import POSITION_STATUS_CLOSED
-from dydx3.constants import ORDER_TYPE_LIMIT, ORDER_TYPE_MARKET, ORDER_TYPE_TRAILING_STOP
-from dydx3.constants import TIME_IN_FORCE_GTT, TIME_IN_FORCE_FOK
+from dydx3.helpers.request_helpers import generate_now_iso
+from dydx3.constants import TIME_IN_FORCE_IOC, TIME_IN_FORCE_FOK, TIME_IN_FORCE_GTT
+from dydx3.constants import (
+    NETWORK_ID_MAINNET,
+    NETWORK_ID_ROPSTEN,
+    API_HOST_MAINNET,
+    API_HOST_ROPSTEN,
+    WS_HOST_MAINNET,
+    WS_HOST_ROPSTEN,
+)
+from dydx3.constants import POSITION_STATUS_OPEN, POSITION_STATUS_CLOSED
+from dydx3.constants import ORDER_TYPE_LIMIT, ORDER_TYPE_MARKET, ORDER_TYPE_TAKE_PROFIT, ORDER_TYPE_TRAILING_STOP
 from dydx3.constants import ORDER_STATUS_OPEN
 from dydx3.errors import DydxApiError
 from dydx3.helpers.request_helpers import generate_now_iso
@@ -41,8 +48,31 @@ def safe_execute(f: Callable):
 
     return wrapper
 
+class Network:
+    def __init__(self, endpoint, id, api_host, ws_host):
+        self.endpoint = endpoint
+        self.network_id = id
+        self.api_host = api_host
+        self.ws_host = ws_host
+
+class Account:
+    def __init__(self, address, private_key, network):
+        self.address = address
+        self.private_key = private_key
+        self.network = network
+
+networks = {
+    'ropsten': Network(os.getenv("ROPSTEN_INFURA_NODE"), 3, API_HOST_ROPSTEN, WS_HOST_ROPSTEN),
+    'mainnet': Network(os.getenv("INFURA_NODE"), 1, API_HOST_MAINNET, WS_HOST_MAINNET)
+}
+
+accounts = {
+    'main': Account(os.getenv("ETH_ADDRESS"), os.getenv("ETH_PRIVATE_KEY")),
+    'test': Account(os.getenv("ETH_TEST_ADDRESS"), os.getenv("ETH_TEST_PRIVATE_KEY"))
+}
 
 class DydxConnector:
+
     order_book = {}
     symbols_info = {}
     subscriptions = []
@@ -54,27 +84,24 @@ class DydxConnector:
 
     def __init__(
         self,
-        eth_address: str,
-        eth_private_key: str,
-        symbols: list,
-        eth_node_url="http://localhost:8545",
+        account: str = "test",
+        network: str = "ropsten"
     ) -> None:
-        self.eth_address = eth_address
-        self.eth_private_key = eth_private_key
-        self.eth_node_url = eth_node_url
+        self.account = accounts[account]
+        self.network = networks[network]
         self.sync_client = Client(
-            network_id=NETWORK_ID_ROPSTEN,
-            host=API_HOST_ROPSTEN,
-            default_ethereum_address=self.eth_address,
-            eth_private_key=self.eth_private_key,
-            web3=Web3(Web3.HTTPProvider(self.eth_node_url)),
+            network_id=self.network.network_id,
+            host=self.network.api_host,
+            default_ethereum_address=self.account.address,
+            eth_private_key=self.account.private_key,
+            web3=Web3(Web3.HTTPProvider(self.network.endpoint)),
         )
         self.sync_client.stark_private_key = (
             self.sync_client.onboarding.derive_stark_key()
         )
-        self.symbols = symbols
-        for symbol in symbols:
-            self.order_book[symbol] = OrderBookCache(symbol)
+        # self.symbols = symbols
+        # for symbol in symbols:
+        #     self.order_book[symbol] = OrderBookCache(symbol)
 
     @safe_execute
     def get_user(self):
@@ -141,12 +168,19 @@ class DydxConnector:
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_GTT,
             expiration_epoch_seconds=10613988637,
-            cancel_id=None if (not cancel_id) else str(cancel_id),
+            cancel_id=None if not cancel_id else str(cancel_id),
         )
 
     @safe_execute
     def send_trailing_stop_order(
-            self, *, symbol, side, price, quantity, trailing_percent, cancel_id=None
+        self,
+        *,
+        symbol: str,
+        side: str,
+        price: str,
+        quantity: str,
+        trailing_percent: str,
+        client_id: str = None,
     ):
         return self.sync_client.private.create_order(
             position_id=self.sync_client.private.get_account()["account"][
@@ -154,19 +188,54 @@ class DydxConnector:
             ],
             market=symbol,
             side=side,
+            price=price,
+            size=quantity,
             order_type=ORDER_TYPE_TRAILING_STOP,
             post_only=False,
-            size=str(quantity),
-            price=str(price),
+            trailing_percent=trailing_percent,
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_GTT,
             expiration_epoch_seconds=10613988637,
-            cancel_id=None if (not cancel_id) else str(cancel_id),
-            trailing_percent=trailing_percent
+            client_id=client_id,
         )
 
     @safe_execute
-    def send_ioc_order(self, *, symbol, side, price, quantity, our_id=None):
+    def send_take_profit_order(
+        self,
+        *,
+        symbol: str,
+        side: str,
+        price: str,
+        quantity: str,
+        client_id: str = None
+    ):
+        return self.sync_client.private.create_order(
+            position_id=self.sync_client.private.get_account()["account"][
+                "positionId"
+            ],
+            market=symbol,
+            side=side,
+            order_type=ORDER_TYPE_TAKE_PROFIT,
+            post_only=False,
+            size=quantity,
+            price=price,
+            trigger_price=price,
+            limit_fee="0.015",
+            time_in_force=TIME_IN_FORCE_GTT,
+            expiration_epoch_seconds=10613988637,
+            client_id=client_id,
+        )
+
+    @safe_execute
+    def send_fok_market_order(
+        self,
+        *,
+        symbol: str,
+        side: str,
+        price: str,
+        quantity: str,
+        client_id: str =None
+    ):
         return self.sync_client.private.create_order(
             position_id=self.sync_client.private.get_account()["account"][
                 "positionId"
@@ -175,12 +244,12 @@ class DydxConnector:
             side=side,
             order_type=ORDER_TYPE_MARKET,
             post_only=False,
-            size=str(round(quantity, 3)),
-            price=str(round(price, 1)),
+            size=quantity,
+            price=price,
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_FOK,
             expiration_epoch_seconds=10613988637,
-            client_id=our_id,
+            client_id=client_id,
         )
 
     @safe_execute
@@ -210,7 +279,7 @@ class DydxConnector:
         return self.sync_client.private.cancel_all_orders(market=market)
 
     async def subscribe_and_recieve(self) -> None:
-        async with websockets.connect(WS_HOST_ROPSTEN) as websocket:
+        async with websockets.connect(self.network.ws_host) as websocket:
             for request in self.subscriptions:
                 await websocket.send(json.dumps(request))
 
@@ -266,7 +335,9 @@ class DydxConnector:
                 "channel": "v3_accounts",
                 "accountNumber": "0",
                 "apiKey": self.get_client().api_key_credentials["key"],
-                "passphrase": self.get_client().api_key_credentials["passphrase"],
+                "passphrase": self.get_client().api_key_credentials[
+                    "passphrase"
+                ],
                 "timestamp": now_iso_string,
                 "signature": signature,
             }

@@ -369,7 +369,7 @@ class MarketMakingStrategy:
             )
             self.open_orders[
                 side
-            ] = self.dydx_connector_trades.send_limit_order(
+            ] = self.dydx_connector_trades.send_maker_order(
                 symbol=self.symbol,
                 side=side,
                 price=self.get_new_price(side, spread)

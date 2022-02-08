@@ -61,7 +61,7 @@ class SpeedMeasure:
             self._speed_test(self.connector.get_our_positions, opened=False)
             self._speed_test(self.connector.get_our_orders)
             order = self._speed_test(
-                self.connector.send_limit_order,
+                self.connector.send_maker_order,
                 symbol=symbol,
                 side=side,
                 price=1,
