@@ -14,35 +14,30 @@ class Indicators:
     @staticmethod
     def fill_target_values(
         indicators_values: dict,
-        trade_window: BuySellQueue,
         punch_window: BuySellQueue,
         stop_profit: float,
         stop_loss: float,
     ) -> None:
         column_name = "target"
 
-        stop_loss_trigger_trade = punch_window.get_first_priced_below(
-            "SELL", trade_window.last_prices["BUY"] * (1 - stop_loss)
-        )
-        stop_profit_trigger_trade = punch_window.get_first_priced_above(
-            "BUY", trade_window.last_prices["BUY"] * (1 + stop_profit)
-        )
+        buy_price = float(punch_window["BUY"][0]["price"])
+        max_sell_price = 0
 
-        if not stop_loss_trigger_trade and not stop_profit_trigger_trade:
-            indicators_values[column_name] = 0
-        elif not stop_profit_trigger_trade:
-            indicators_values[column_name] = -1
-        elif not stop_loss_trigger_trade:
-            indicators_values[column_name] = 1
-        else:
-            indicators_values[column_name] = (
-                1
-                if (
-                    string_to_datetime(stop_loss_trigger_trade["createdAt"])
-                    > string_to_datetime(stop_profit_trigger_trade["createdAt"])
-                )
-                else -1
-            )
+        for trade in punch_window["SELL"]:
+            sell_price = float(trade["price"]) 
+            if sell_price > max_sell_price:
+                if sell_price > buy_price * (1 + stop_profit):
+                    indicators_values[column_name] = 1 
+                    return string_to_datetime(trade["createdAt"])- punch_window.from_dt
+                max_sell_price = sell_price
+            else:
+                if sell_price < max_sell_price * (1 - stop_loss):
+                    indicators_values[column_name] = -1
+                    return string_to_datetime(trade["createdAt"]) - punch_window.from_dt
+        
+        indicators_values[column_name] = 0
+        return string_to_datetime(punch_window.common_queue[-1]["createdAt"]) - punch_window.from_dt
+
 
     @staticmethod
     def fill_features_values(
@@ -54,7 +49,7 @@ class Indicators:
 
         indicators_punch_values[
             "seconds-since-midnight"
-        ] = Indicators.seconds_since_midnight(queue.common_queue[-1])
+        ] = int((queue.to_dt - queue.to_dt.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds())
         indicators_punch_values["date"] = string_to_datetime(
             queue.common_queue[-1]["createdAt"]
         ).date()
@@ -92,24 +87,9 @@ class Indicators:
             return
         diff = (
             queue.to_dt
-            - string_to_datetime(
-                queue[side][
-                    max(
-                        0,
-                        len(queue[side]) - n_trades_ago - 1,
-                    )
-                ]["createdAt"]
-            )
+            - string_to_datetime(queue[side][-n_trades_ago]["createdAt"])
         ).total_seconds()
         indicators_values[column_name] = diff
-
-    @staticmethod
-    def seconds_since_midnight(trade) -> int:
-        current_trade_dt = string_to_datetime(trade["createdAt"])
-        midnight = current_trade_dt.replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        return (current_trade_dt - midnight).seconds
 
     @staticmethod
     def WI_exp_moving_average(
