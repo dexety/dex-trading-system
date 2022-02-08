@@ -9,7 +9,6 @@ from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
 from utils.helpful_scripts import string_to_datetime, memory
 from utils.logger.logger import Logger
 
-# Logger.disabled = True
 
 class DataParser:
     stop_profit = 0.0015
@@ -51,14 +50,14 @@ class DataParser:
         self.fill_punch_window()
 
     def set_window_borders(self, trade_window_from_dt: datetime) -> None:
-        # Logger.debug("set window borders")
+        Logger.debug("set window borders")
         self.trade_window.set_window_borders(trade_window_from_dt)
         self.punch_window.set_window_borders(
             trade_window_from_dt + self.trade_window_td
         )
 
     def update_windows_after_punch(self) -> None:
-        # Logger.debug("update windows ap")
+        Logger.debug("update windows ap")
         self.set_window_borders(
             self.trade_window.from_dt + self.update_interval
         )
@@ -67,14 +66,14 @@ class DataParser:
         self.clean_trade_window()
 
     def get_new_trade(self) -> dict:
-        # Logger.debug("get new trade")
+        Logger.debug("get new trade")
         self.progress_bar.update()
         trade = self.data[self.data_it]
         self.data_it += 1
         return trade
 
     def clean_trade_window(self) -> None:
-        # Logger.debug("clean tw")
+        Logger.debug("clean tw")
         while (
             self.trade_window.size()
             and not self.trade_window.is_trade_inside(
@@ -85,14 +84,14 @@ class DataParser:
             self.trade_window.pop_front()
 
     def fill_trade_window(self) -> None:
-        # Logger.debug("fill tw")
+        Logger.debug("fill tw")
         while self.data_it < len(
             self.data
         ) and self.trade_window.is_trade_inside(self.data[self.data_it]):
             self.trade_window.push_back(self.get_new_trade())
 
     def move_from_punch_window_to_trade_window(self) -> None:
-        # Logger.debug("move from pw to tw")
+        Logger.debug("move from pw to tw")
         while (
             self.punch_window.size()
             and not self.punch_window.is_trade_inside(
@@ -104,7 +103,7 @@ class DataParser:
                 self.trade_window.push_back(trade_to_move)
 
     def fill_punch_window(self) -> None:
-        # Logger.debug("fill pw")
+        Logger.debug("fill pw")
         are_trades_added = False
         while self.data_it < len(
             self.data
@@ -117,7 +116,7 @@ class DataParser:
             self.punch_window.push_back(self.get_new_trade())
 
     def update_windows_no_punch(self) -> None:
-        # Logger.debug("update windows np")
+        Logger.debug("update windows np")
         new_trade = self.get_new_trade()
         self.set_window_borders(
             string_to_datetime(new_trade["createdAt"])
@@ -129,7 +128,7 @@ class DataParser:
         self.clean_trade_window()
 
     def add_result(self) -> bool:
-        # Logger.debug("add result")
+        Logger.debug("add result")
         """returns true if stoploss or stopprofit reached, false otherwise (no punch or not enough trades in queue)"""
         if (
             not self.punch_window["SELL"]
@@ -181,6 +180,7 @@ class DataParser:
 
 @memory(percentage=0.5)
 def main():
+    Logger.disabled = True
     date_borders = "01-08-2021_22-01-2022"
     if len(sys.argv) != 2:
         input_path = f"../../data/trades/raw/trades_{date_borders}.csv"
@@ -188,6 +188,7 @@ def main():
             f"../../data/trades/processed/indicators_{date_borders}.csv"
         )
     else:
+        print(f"Part {int(sys.argv[1])} started...")
         raw_parts_dir_path = f"../../data/trades/raw/parts_{date_borders}"
         processed_parts_dir_path = (
             f"../../data/trades/processed/parts_{date_borders}"
