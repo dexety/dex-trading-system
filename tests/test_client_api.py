@@ -1,18 +1,8 @@
-import os
 from datetime import datetime, timedelta
 from dydx3.constants import MARKET_BTC_USD, MARKET_ETH_USD, ORDER_SIDE_BUY
 from connectors.dydx.connector import DydxConnector, safe_execute
 
-ETH_KEY = os.getenv("ETH_ADDRESS")
-ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
-INFURA_NODE = os.getenv("INFURA_NODE")
-
-dydx_connector = DydxConnector(
-    ETH_KEY,
-    ETH_PRIVATE_KEY,
-    [MARKET_BTC_USD],
-    INFURA_NODE,
-)
+dydx_connector = DydxConnector(MARKET_BTC_USD)
 
 
 def test_get_user():
@@ -78,7 +68,7 @@ def test_get_order_book():
 
 @safe_execute
 def test_send_and_cancel_limit_order():
-    order = dydx_connector.send_maker_order(
+    order = dydx_connector.send_limit_order(
         symbol=MARKET_ETH_USD, side=ORDER_SIDE_BUY, price=1, quantity=0.1
     )
     assert order != {}

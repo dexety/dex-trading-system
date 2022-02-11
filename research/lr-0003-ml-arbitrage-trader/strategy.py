@@ -55,10 +55,7 @@ class MLArbitrage:
             min_side_queue_length=self.min_side_queue_length,
         )
         self.connector = DydxConnector(
-            self.ETH_ADDRESS,
-            self.ETH_PRIVATE_KEY,
-            [self.symbol],
-            self.INFURA_NODE,
+            self.symbol,
         )
         self.connector.add_trade_listener(self.trade_listener)
         self.connector.add_trade_subscription(self.symbol)
@@ -121,7 +118,7 @@ class MLArbitrage:
             side=ORDER_SIDE_BUY,
             price=price,
             quantity=self.eth_trading_budget,
-            client_id=f"market long #{self.order_cycles_counter} {self.start_timestamp}"
+            client_id=f"market long #{self.order_cycles_counter} {self.start_timestamp}",
         )
 
         self.opened_position_cv.wait_for(
