@@ -19,4 +19,8 @@
         logging-not-lazy,
         no-name-in-module,
         import-error,
+        too-many-instance-attributes,
+        too-many-public-methods,
+        c-extension-no-member,
+        dangerous-default-value,
     '''

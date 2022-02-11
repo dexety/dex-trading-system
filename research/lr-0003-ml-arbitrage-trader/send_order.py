@@ -1,5 +1,3 @@
-import sys
-import os
 import json
 from datetime import datetime
 
@@ -12,16 +10,8 @@ from dydx3.constants import (
 
 from connectors.dydx.connector import DydxConnector
 
-ETH_KEY = os.getenv("ETH_TEST_ADDRESS")
-ETH_PRIVATE_KEY = os.getenv("ETH_TEST_PRIVATE_KEY")
-INFURA_NODE = os.getenv("ROPSTEN_INFURA_NODE")
-
 programm_start_time = str(datetime.utcnow())
-dydx_connector = DydxConnector(
-    [MARKET_BTC_USD],
-    account="test",
-    network="ropsten"
-)
+dydx_connector = DydxConnector(MARKET_BTC_USD)
 client = dydx_connector.get_client()
 
 order_book = dydx_connector.get_order_book(MARKET_ETH_USD)
@@ -31,10 +21,14 @@ price = (best_bid + best_ask) / 2
 print(f"best ask: {best_ask}")
 print(f"best bid: {best_bid}")
 
+
 def trade_listener(trade):
     print(json.dumps(trade, indent=4))
 
-trades = dydx_connector.get_client().public.get_trades(MARKET_ETH_USD)["trades"][0]
+
+trades = dydx_connector.get_client().public.get_trades(MARKET_ETH_USD)[
+    "trades"
+][0]
 
 try:
     go_long_order = dydx_connector.send_fok_market_order(

@@ -1,3 +1,4 @@
+from datetime import datetime
 from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
 from utils.helpful_scripts import string_to_datetime
 
@@ -17,27 +18,34 @@ class Indicators:
         punch_window: BuySellQueue,
         stop_profit: float,
         stop_loss: float,
-    ) -> None:
+    ) -> datetime:
         column_name = "target"
-
-        buy_price = float(punch_window["BUY"][0]["price"])
+        buy_price = float(punch_window["SELL"][0]["price"])
         max_sell_price = 0
 
         for trade in punch_window["SELL"]:
-            sell_price = float(trade["price"]) 
+            sell_price = float(trade["price"])
             if sell_price > max_sell_price:
                 if sell_price > buy_price * (1 + stop_profit):
-                    indicators_values[column_name] = 1 
-                    return string_to_datetime(trade["createdAt"])- punch_window.from_dt
+                    indicators_values[column_name] = 1
+                    return (
+                        string_to_datetime(trade["createdAt"])
+                        - punch_window.from_dt
+                    )
                 max_sell_price = sell_price
             else:
                 if sell_price < max_sell_price * (1 - stop_loss):
                     indicators_values[column_name] = -1
-                    return string_to_datetime(trade["createdAt"]) - punch_window.from_dt
-        
-        indicators_values[column_name] = 0
-        return string_to_datetime(punch_window.common_queue[-1]["createdAt"]) - punch_window.from_dt
+                    return (
+                        string_to_datetime(trade["createdAt"])
+                        - punch_window.from_dt
+                    )
 
+        indicators_values[column_name] = 0
+        return (
+            string_to_datetime(punch_window.common_queue[-1]["createdAt"])
+            - punch_window.from_dt
+        )
 
     @staticmethod
     def fill_features_values(
@@ -47,9 +55,12 @@ class Indicators:
         n_trades_ago_list: list,
     ) -> None:
 
-        indicators_punch_values[
-            "seconds-since-midnight"
-        ] = int((queue.to_dt - queue.to_dt.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds())
+        indicators_punch_values["seconds-since-midnight"] = int(
+            (
+                queue.to_dt
+                - queue.to_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            ).total_seconds()
+        )
         indicators_punch_values["date"] = string_to_datetime(
             queue.common_queue[-1]["createdAt"]
         ).date()

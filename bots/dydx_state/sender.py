@@ -10,18 +10,10 @@ from connectors.dydx.connector import DydxConnector
 
 class Sender:
     TOKEN = os.getenv("LLV_DYDX")
-    ETH_ADDRESS = os.getenv("ETH_ADDRESS")
-    ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
-    INFURA_NODE = os.getenv("INFURA_NODE")
 
     def __init__(self) -> None:
         self.bot = TeleBot(self.TOKEN)
-        self.dydx_connector = DydxConnector(
-            self.ETH_ADDRESS,
-            self.ETH_PRIVATE_KEY,
-            [],
-            self.INFURA_NODE,
-        )
+        self.dydx_connector = DydxConnector()
         self.set_null_account()
 
     def set_null_account(self) -> None:

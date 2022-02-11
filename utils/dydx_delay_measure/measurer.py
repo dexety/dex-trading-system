@@ -13,10 +13,7 @@ from connectors.dydx.connector import DydxConnector
 
 
 class SpeedMeasure:
-    ETH_KEY = os.getenv("ETH_ADDRESS")
-    ETH_SECRET = os.getenv("ETH_PRIVATE_KEY")
-    INFURA_NODE = os.getenv("INFURA_NODE")
-    connector = DydxConnector(ETH_KEY, ETH_SECRET, MARKET_ETH_USD, INFURA_NODE)
+    connector = DydxConnector(MARKET_ETH_USD)
     orders_info = {}
     connector_funcs_speed_info = {}
     iters_num = 0
@@ -61,7 +58,7 @@ class SpeedMeasure:
             self._speed_test(self.connector.get_our_positions, opened=False)
             self._speed_test(self.connector.get_our_orders)
             order = self._speed_test(
-                self.connector.send_maker_order,
+                self.connector.send_limit_order,
                 symbol=symbol,
                 side=side,
                 price=1,

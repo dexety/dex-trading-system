@@ -1,4 +1,3 @@
-import os
 import time
 import argparse
 from functools import wraps
@@ -27,10 +26,6 @@ def too_many_requests_guard(function):
 
 
 class MarketMakingStrategy:
-    ETH_ADDRESS = os.getenv("ETH_ADDRESS")
-    ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
-    INFURA_NODE = os.getenv("INFURA_NODE")
-
     update_processing_ms = 100
     order_expiration_time_sec = 30
     order_checker_period_sec = 0.3
@@ -55,16 +50,10 @@ class MarketMakingStrategy:
         else:
             raise Exception("Unsupported symbol")
         self.dydx_connector_trades = DydxConnector(
-            self.ETH_ADDRESS,
-            self.ETH_PRIVATE_KEY,
             [symbol],
-            self.INFURA_NODE,
         )
         self.dydx_connector_order_book = DydxConnector(
-            self.ETH_ADDRESS,
-            self.ETH_PRIVATE_KEY,
             [symbol],
-            self.INFURA_NODE,
         )
         self.dydx_connector_trades.add_trade_listener(self.on_trade_update)
         self.dydx_connector_order_book.add_orderbook_listener(
@@ -369,7 +358,7 @@ class MarketMakingStrategy:
             )
             self.open_orders[
                 side
-            ] = self.dydx_connector_trades.send_maker_order(
+            ] = self.dydx_connector_trades.send_limit_order(
                 symbol=self.symbol,
                 side=side,
                 price=self.get_new_price(side, spread)

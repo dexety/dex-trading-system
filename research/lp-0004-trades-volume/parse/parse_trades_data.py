@@ -112,7 +112,13 @@ class DataParser:
             are_trades_added = True
 
         if not are_trades_added and not self.data_it == len(self.data):
-            self.set_window_borders(self.trade_window.from_dt + (string_to_datetime(self.data[self.data_it]["createdAt"]) - self.punch_window.to_dt))
+            self.set_window_borders(
+                self.trade_window.from_dt
+                + (
+                    string_to_datetime(self.data[self.data_it]["createdAt"])
+                    - self.punch_window.to_dt
+                )
+            )
             self.punch_window.push_back(self.get_new_trade())
 
     def update_windows_no_punch(self) -> None:
@@ -177,6 +183,7 @@ class DataParser:
             else:
                 self.update_windows_no_punch()
         self.write_data()
+
 
 @memory(percentage=0.5)
 def main():
