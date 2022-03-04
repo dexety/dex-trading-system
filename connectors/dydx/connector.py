@@ -8,11 +8,11 @@ from web3 import Web3
 from tqdm import tqdm
 
 from dydx3 import Client
-from dydx3.constants import API_HOST_MAINNET, TIME_IN_FORCE_IOC
-from dydx3.constants import NETWORK_ID_MAINNET, WS_HOST_MAINNET
+from dydx3.constants import API_HOST_MAINNET, TIME_IN_FORCE_IOC, API_HOST_ROPSTEN
+from dydx3.constants import NETWORK_ID_MAINNET, WS_HOST_MAINNET, NETWORK_ID_ROPSTEN, WS_HOST_ROPSTEN
 from dydx3.constants import POSITION_STATUS_OPEN
 from dydx3.constants import POSITION_STATUS_CLOSED
-from dydx3.constants import ORDER_TYPE_LIMIT
+from dydx3.constants import ORDER_TYPE_LIMIT, ORDER_TYPE_MARKET, ORDER_TYPE_TRAILING_STOP
 from dydx3.constants import TIME_IN_FORCE_GTT
 from dydx3.constants import ORDER_STATUS_OPEN
 from dydx3.errors import DydxApiError
@@ -60,8 +60,8 @@ class DydxConnector:
         self.eth_private_key = eth_private_key
         self.eth_node_url = eth_node_url
         self.sync_client = Client(
-            network_id=NETWORK_ID_MAINNET,
-            host=API_HOST_MAINNET,
+            network_id=NETWORK_ID_ROPSTEN,
+            host=API_HOST_ROPSTEN,
             default_ethereum_address=self.eth_address,
             eth_private_key=self.eth_private_key,
             web3=Web3(Web3.HTTPProvider(self.eth_node_url)),
@@ -142,6 +142,27 @@ class DydxConnector:
         )
 
     @safe_execute
+    def send_trailing_stop_order(
+            self, *, symbol, side, price, quantity, trailing_percent, cancel_id=None
+    ):
+        return self.sync_client.private.create_order(
+            position_id=self.sync_client.private.get_account()["account"][
+                "positionId"
+            ],
+            market=symbol,
+            side=side,
+            order_type=ORDER_TYPE_TRAILING_STOP,
+            post_only=False,
+            size=str(quantity),
+            price=str(price),
+            limit_fee="0.015",
+            time_in_force=TIME_IN_FORCE_GTT,
+            expiration_epoch_seconds=10613988637,
+            cancel_id=None if (not cancel_id) else str(cancel_id),
+            trailing_percent=trailing_percent
+        )
+
+    @safe_execute
     def send_ioc_order(self, *, symbol, side, price, quantity, our_id=None):
         return self.sync_client.private.create_order(
             position_id=self.sync_client.private.get_account()["account"][
@@ -150,6 +171,24 @@ class DydxConnector:
             market=symbol,
             side=side,
             order_type=ORDER_TYPE_LIMIT,
+            post_only=False,
+            size=str(quantity),
+            price=str(price),
+            limit_fee="0.015",
+            time_in_force=TIME_IN_FORCE_IOC,
+            expiration_epoch_seconds=10613988637,
+            client_id=None if (not our_id) else str(our_id),
+        )
+
+    @safe_execute
+    def send_market_order(self, *, symbol, side, price, quantity, our_id=None):
+        return self.sync_client.private.create_order(
+            position_id=self.sync_client.private.get_account()["account"][
+                "positionId"
+            ],
+            market=symbol,
+            side=side,
+            order_type=ORDER_TYPE_MARKET,
             post_only=False,
             size=str(quantity),
             price=str(price),
@@ -221,7 +260,7 @@ class DydxConnector:
         )
 
     async def subscribe_and_recieve(self) -> None:
-        async with websockets.connect(WS_HOST_MAINNET) as websocket:
+        async with websockets.connect(WS_HOST_ROPSTEN) as websocket:
             for request in self.subscriptions:
                 await websocket.send(json.dumps(request))
 
