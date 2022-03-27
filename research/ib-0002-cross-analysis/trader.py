@@ -46,8 +46,6 @@ class Trader:
     socket_binance = f"wss://dstream.binance.com/ws/{symbol_binance}@trade"
     socket_dydx = f"wss://api.stage.dydx.exchange/v3/ws"
     connector = DydxConnector(
-        "0x5e1F56e732C6e0C465B67a59fC96E862172D192B",
-        "c559757ab5c49310a44f57a958de1f8e4af64588dd6e809322bd75683bab501a",
         [MARKET_ETH_USD],
     )
     loop = asyncio.get_event_loop()

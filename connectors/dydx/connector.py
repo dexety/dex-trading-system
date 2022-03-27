@@ -281,24 +281,6 @@ class DydxConnector:
         )
 
     @safe_execute
-    def send_market_order(self, *, symbol, side, price, quantity, our_id=None):
-        return self.sync_client.private.create_order(
-            position_id=self.sync_client.private.get_account()["account"][
-                "positionId"
-            ],
-            market=symbol,
-            side=side,
-            order_type=ORDER_TYPE_MARKET,
-            post_only=False,
-            size=str(quantity),
-            price=str(price),
-            limit_fee="0.015",
-            time_in_force=TIME_IN_FORCE_IOC,
-            expiration_epoch_seconds=10613988637,
-            client_id=None if (not our_id) else str(our_id),
-        )
-
-    @safe_execute
     def cancel_order(self, order_id) -> None:
         return self.sync_client.private.cancel_order(order_id=str(order_id))
 
