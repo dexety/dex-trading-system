@@ -203,8 +203,8 @@ class DydxConnector:
         return self.sync_client.private.cancel_order(order_id=str(order_id))
 
     @safe_execute
-    def cancel_all_orders(self) -> None:
-        return self.sync_client.private.cancel_all_orders()
+    def cancel_all_orders(self, market) -> None:
+        return self.sync_client.private.cancel_all_orders(market=market)
 
     def add_orderbook_subscription(self, symbol: str) -> None:
         self.subscriptions.append(
