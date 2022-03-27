@@ -11,7 +11,11 @@ Logger_debug.setLevel(logging.DEBUG)
 
 trades_handler = logging.FileHandler("logs/trades.log")
 trades_handler.setLevel(logging.INFO)
-trades_handler.setFormatter(logging.Formatter('%(asctime)s.%(msecs)03dZ,%(message)s', "%Y-%m-%dT%H:%M:%S"))
+trades_handler.setFormatter(
+    logging.Formatter(
+        "%(asctime)s.%(msecs)03dZ,%(message)s", "%Y-%m-%dT%H:%M:%S"
+    )
+)
 
 debug_handler = logging.FileHandler("logs/trader_debug.log")
 debug_handler.setLevel(logging.DEBUG)

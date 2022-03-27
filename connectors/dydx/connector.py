@@ -7,7 +7,6 @@ from typing import Callable
 from functools import wraps
 import websockets
 from web3 import Web3
-from tqdm import tqdm
 
 from dydx3 import Client
 from dydx3.helpers.request_helpers import generate_now_iso
@@ -23,7 +22,6 @@ from dydx3.constants import ORDER_TYPE_TAKE_PROFIT
 from dydx3.constants import ORDER_TYPE_TRAILING_STOP
 from dydx3.constants import ORDER_STATUS_OPEN
 from dydx3.errors import DydxApiError
-from dydx3.helpers.request_helpers import generate_now_iso
 
 from connectors.dydx.order_book_cache import OrderBookCache
 
@@ -57,13 +55,6 @@ class Network:
     ws_host: str
 
 
-@dataclass
-class Account:
-    address: str
-    private_key: str
-    network: str
-
-
 networks = {
     "ropsten": Network(
         os.getenv("ROPSTEN_INFURA_NODE"),
@@ -79,19 +70,6 @@ networks = {
     ),
 }
 
-accounts = {
-    "main": Account(
-        os.getenv("ETH_ADDRESS"),
-        os.getenv("ETH_PRIVATE_KEY"),
-        networks["mainnet"],
-    ),
-    "test": Account(
-        os.getenv("ETH_TEST_ADDRESS"),
-        os.getenv("ETH_TEST_PRIVATE_KEY"),
-        networks["mainnet"],
-    ),
-}
-
 
 class DydxConnector:
     order_book = {}
@@ -101,16 +79,16 @@ class DydxConnector:
     def __init__(
         self,
         symbols: list = [],
-        account: str = "main",
         network: str = "mainnet",
     ) -> None:
-        self.account = accounts[account]
+        self.address = os.getenv("ETH_ADDRESS")
+        self.private_key = os.getenv("ETH_PRIVATE_KEY")
         self.network = networks[network]
         self.sync_client = Client(
             network_id=self.network.network_id,
             host=self.network.api_host,
-            default_ethereum_address=self.account.address,
-            eth_private_key=self.account.private_key,
+            default_ethereum_address=self.address,
+            eth_private_key=self.private_key,
             web3=Web3(Web3.HTTPProvider(self.network.endpoint)),
         )
         self.sync_client.stark_private_key = (
@@ -255,7 +233,7 @@ class DydxConnector:
         )
 
     @safe_execute
-    def send_fok_market_order(
+    def send_market_order(
         self,
         *,
         symbol: str,

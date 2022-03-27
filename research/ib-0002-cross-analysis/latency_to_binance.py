@@ -7,7 +7,7 @@ socket = f"wss://dstream.binance.com/ws/{symbol}@trade"
 
 stats = dict()
 stats["max"] = -1
-stats["min"] = 10**3
+stats["min"] = 10 ** 3
 
 
 async def get_trades():
@@ -17,7 +17,7 @@ async def get_trades():
             recv_time = datetime.now()
             json_data = json.loads(data)
             print(json_data)
-            delta = recv_time - datetime.fromtimestamp(json_data["E"]/1000)
+            delta = recv_time - datetime.fromtimestamp(json_data["E"] / 1000)
             stats["max"] = max(delta.total_seconds(), stats["max"])
             stats["min"] = min(delta.total_seconds(), stats["min"])
 
@@ -25,8 +25,4 @@ async def get_trades():
 loop = asyncio.get_event_loop()
 loop.run_until_complete(get_trades())
 
-print(f"MAX: {stats['max']}\n"
-      f"MIN: {stats['min']}\n")
-
-
-
+print(f"MAX: {stats['max']}\n" f"MIN: {stats['min']}\n")
