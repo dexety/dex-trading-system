@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 from datetime import datetime
->>>>>>> Merge new connector into cross-analisys (#19)
 from utils.buy_sell_queue.buy_sell_queue import BuySellQueue
 from utils.helpful_scripts import string_to_datetime
 
@@ -14,7 +11,6 @@ class Indicators:
         for name, indicator in Indicators.__dict__.items():
             if name[:2] == "WI":
                 Indicators.static_WI_dict[name] = indicator.__func__
-<<<<<<< HEAD
 
     @staticmethod
     def fill_target_values(
@@ -48,43 +44,6 @@ class Indicators:
                 )
                 else -1
             )
-=======
-
-    @staticmethod
-    def fill_target_values(
-        indicators_values: dict,
-        punch_window: BuySellQueue,
-        stop_profit: float,
-        stop_loss: float,
-    ) -> datetime:
-        column_name = "target"
-        buy_price = float(punch_window["SELL"][0]["price"])
-        max_sell_price = 0
-
-        for trade in punch_window["SELL"]:
-            sell_price = float(trade["price"])
-            if sell_price > max_sell_price:
-                if sell_price > buy_price * (1 + stop_profit):
-                    indicators_values[column_name] = 1
-                    return (
-                        string_to_datetime(trade["createdAt"])
-                        - punch_window.from_dt
-                    )
-                max_sell_price = sell_price
-            else:
-                if sell_price < max_sell_price * (1 - stop_loss):
-                    indicators_values[column_name] = -1
-                    return (
-                        string_to_datetime(trade["createdAt"])
-                        - punch_window.from_dt
-                    )
-
-        indicators_values[column_name] = 0
-        return (
-            string_to_datetime(punch_window.common_queue[-1]["createdAt"])
-            - punch_window.from_dt
-        )
->>>>>>> Merge new connector into cross-analisys (#19)
 
     @staticmethod
     def fill_features_values(
@@ -94,18 +53,12 @@ class Indicators:
         n_trades_ago_list: list,
     ) -> None:
 
-<<<<<<< HEAD
-        indicators_punch_values[
-            "seconds-since-midnight"
-        ] = Indicators.seconds_since_midnight(queue.common_queue[-1])
-=======
         indicators_punch_values["seconds-since-midnight"] = int(
             (
                 queue.to_dt
                 - queue.to_dt.replace(hour=0, minute=0, second=0, microsecond=0)
             ).total_seconds()
         )
->>>>>>> Merge new connector into cross-analisys (#19)
         indicators_punch_values["date"] = string_to_datetime(
             queue.common_queue[-1]["createdAt"]
         ).date()
@@ -143,18 +96,7 @@ class Indicators:
             return
         diff = (
             queue.to_dt
-<<<<<<< HEAD
-            - string_to_datetime(
-                queue[side][
-                    max(
-                        0,
-                        len(queue[side]) - n_trades_ago - 1,
-                    )
-                ]["createdAt"]
-            )
-=======
             - string_to_datetime(queue[side][-n_trades_ago]["createdAt"])
->>>>>>> Merge new connector into cross-analisys (#19)
         ).total_seconds()
         indicators_values[column_name] = diff
 
