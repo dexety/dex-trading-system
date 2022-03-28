@@ -79,7 +79,7 @@ class DydxConnector:
     def __init__(
         self,
         symbols: list = [],
-        network: str = "mainnet",
+        network: str = "ropsten",
     ) -> None:
         self.address = os.getenv("ETH_ADDRESS")
         self.private_key = os.getenv("ETH_PRIVATE_KEY")
@@ -159,6 +159,7 @@ class DydxConnector:
         side: str,
         price: str,
         quantity: str,
+        client_id: str = None,
         cancel_id: str = None,
     ):
         return self.sync_client.private.create_order(
@@ -174,7 +175,8 @@ class DydxConnector:
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_GTT,
             expiration_epoch_seconds=10613988637,
-            cancel_id=None if not cancel_id else str(cancel_id),
+            client_id=client_id,
+            cancel_id=cancel_id,
         )
 
     @safe_execute
@@ -202,7 +204,7 @@ class DydxConnector:
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_GTT,
             expiration_epoch_seconds=10613988637,
-            client_id=str(client_id),
+            client_id=client_id,
         )
 
     @safe_execute
@@ -229,7 +231,7 @@ class DydxConnector:
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_GTT,
             expiration_epoch_seconds=10613988637,
-            client_id=str(client_id),
+            client_id=client_id,
         )
 
     @safe_execute
@@ -255,7 +257,7 @@ class DydxConnector:
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_FOK,
             expiration_epoch_seconds=10613988637,
-            client_id=str(client_id),
+            client_id=client_id,
         )
 
     @safe_execute
