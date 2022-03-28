@@ -1,16 +1,9 @@
-import os
 from dydx3.constants import MARKET_ETH_USD, ORDER_SIDE_BUY
 from connectors.dydx.connector import DydxConnector
 from speed_measure_class import SpeedMeasure
 
-ETH_KEY = os.getenv("ETH_ADDRESS")
-ETH_SECRET = os.getenv("ETH_PRIVATE_KEY")
-INFURA_NODE = os.getenv("INFURA_NODE")
-
 if __name__ == "__main__":
-    dydx_connector = DydxConnector(
-        ETH_KEY, ETH_SECRET, MARKET_ETH_USD, INFURA_NODE
-    )
+    dydx_connector = DydxConnector(MARKET_ETH_USD)
 
     speed_measure = SpeedMeasure(dydx_connector)
 

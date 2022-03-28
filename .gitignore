@@ -13,4 +13,5 @@ __pycache__
 *.env
 *catboost_info
 *.dump
+*.txt
 *.ipynb_checkpoints/

@@ -1,19 +1,28 @@
 import json
-from datetime import datetime
+import os
 import asyncio
+
 from typing import Callable
 from functools import wraps
-import websockets
+from datetime import datetime
+from dataclasses import dataclass
 from web3 import Web3
 from tqdm import tqdm
 
+import websockets
+
 from dydx3 import Client
-from dydx3.constants import API_HOST_MAINNET, TIME_IN_FORCE_IOC
-from dydx3.constants import NETWORK_ID_MAINNET, WS_HOST_MAINNET
-from dydx3.constants import POSITION_STATUS_OPEN
-from dydx3.constants import POSITION_STATUS_CLOSED
-from dydx3.constants import ORDER_TYPE_LIMIT
+from dydx3.helpers.request_helpers import generate_now_iso
+from dydx3.constants import TIME_IN_FORCE_FOK
 from dydx3.constants import TIME_IN_FORCE_GTT
+from dydx3.constants import NETWORK_ID_MAINNET, NETWORK_ID_ROPSTEN
+from dydx3.constants import API_HOST_MAINNET, API_HOST_ROPSTEN
+from dydx3.constants import WS_HOST_MAINNET, WS_HOST_ROPSTEN
+from dydx3.constants import POSITION_STATUS_OPEN, POSITION_STATUS_CLOSED
+from dydx3.constants import ORDER_TYPE_LIMIT
+from dydx3.constants import ORDER_TYPE_MARKET
+from dydx3.constants import ORDER_TYPE_TAKE_PROFIT
+from dydx3.constants import ORDER_TYPE_TRAILING_STOP
 from dydx3.constants import ORDER_STATUS_OPEN
 from dydx3.errors import DydxApiError
 
@@ -41,30 +50,49 @@ def safe_execute(f: Callable):
     return wrapper
 
 
+@dataclass
+class Network:
+    endpoint: str
+    network_id: int
+    api_host: str
+    ws_host: str
+
+
+networks = {
+    "ropsten": Network(
+        os.getenv("ROPSTEN_INFURA_NODE"),
+        NETWORK_ID_ROPSTEN,
+        API_HOST_ROPSTEN,
+        WS_HOST_ROPSTEN,
+    ),
+    "mainnet": Network(
+        os.getenv("INFURA_NODE"),
+        NETWORK_ID_MAINNET,
+        API_HOST_MAINNET,
+        WS_HOST_MAINNET,
+    ),
+}
+
+
 class DydxConnector:
     order_book = {}
     symbols_info = {}
-    subscriptions = []
-    orderbook_listeners = []
-    trades_listeners = []
     num_of_connection_attempts = 50
 
     def __init__(
         self,
-        eth_address: str,
-        eth_private_key: str,
-        symbols: list,
-        eth_node_url="http://localhost:8545",
+        symbols: list = [],
+        network: str = "ropsten",
     ) -> None:
-        self.eth_address = eth_address
-        self.eth_private_key = eth_private_key
-        self.eth_node_url = eth_node_url
+        self.address = os.getenv("ETH_ADDRESS")
+        self.private_key = os.getenv("ETH_PRIVATE_KEY")
+        self.network = networks[network]
         self.sync_client = Client(
-            network_id=NETWORK_ID_MAINNET,
-            host=API_HOST_MAINNET,
-            default_ethereum_address=self.eth_address,
-            eth_private_key=self.eth_private_key,
-            web3=Web3(Web3.HTTPProvider(self.eth_node_url)),
+            network_id=self.network.network_id,
+            host=self.network.api_host,
+            default_ethereum_address=self.address,
+            eth_private_key=self.private_key,
+            web3=Web3(Web3.HTTPProvider(self.network.endpoint)),
         )
         self.sync_client.stark_private_key = (
             self.sync_client.onboarding.derive_stark_key()
@@ -72,6 +100,11 @@ class DydxConnector:
         self.symbols = symbols
         for symbol in symbols:
             self.order_book[symbol] = OrderBookCache(symbol)
+
+        self.subscriptions = []
+        self.orderbook_listeners = []
+        self.account_listeners = []
+        self.trades_listeners = []
 
     @safe_execute
     def get_user(self):
@@ -122,62 +155,6 @@ class DydxConnector:
         return positions
 
     @safe_execute
-    def send_limit_order(
-        self, *, symbol, side, price, quantity, cancel_id=None
-    ):
-        return self.sync_client.private.create_order(
-            position_id=self.sync_client.private.get_account()["account"][
-                "positionId"
-            ],
-            market=symbol,
-            side=side,
-            order_type=ORDER_TYPE_LIMIT,
-            post_only=False,
-            size=str(quantity),
-            price=str(price),
-            limit_fee="0.015",
-            time_in_force=TIME_IN_FORCE_GTT,
-            expiration_epoch_seconds=10613988637,
-            cancel_id=None if (not cancel_id) else str(cancel_id),
-        )
-
-    @safe_execute
-    def send_ioc_order(self, *, symbol, side, price, quantity, our_id=None):
-        return self.sync_client.private.create_order(
-            position_id=self.sync_client.private.get_account()["account"][
-                "positionId"
-            ],
-            market=symbol,
-            side=side,
-            order_type=ORDER_TYPE_LIMIT,
-            post_only=False,
-            size=str(quantity),
-            price=str(price),
-            limit_fee="0.015",
-            time_in_force=TIME_IN_FORCE_IOC,
-            expiration_epoch_seconds=10613988637,
-            client_id=None if (not our_id) else str(our_id),
-        )
-
-    @safe_execute
-    def cancel_order(self, order_id) -> None:
-        return self.sync_client.private.cancel_order(order_id=str(order_id))
-
-    @safe_execute
-    def cancel_all_orders(self) -> None:
-        return self.sync_client.private.cancel_all_orders()
-
-    def add_orderbook_subscription(self, symbol: str) -> None:
-        self.subscriptions.append(
-            {
-                "type": "subscribe",
-                "channel": "v3_orderbook",
-                "id": symbol,
-                "includeOffsets": True,
-            }
-        )
-
-    @safe_execute
     def get_historical_trades(
         self, symbol: str, start_dt: datetime, end_dt: datetime
     ) -> list:
@@ -203,25 +180,125 @@ class DydxConnector:
         trades.reverse()
         return trades
 
-    def add_trade_subscription(self, symbol: str) -> None:
-        self.subscriptions.append(
-            {
-                "type": "subscribe",
-                "channel": "v3_trades",
-                "id": symbol,
-            }
+    @safe_execute
+    def send_limit_order(
+        self,
+        *,
+        symbol: str,
+        side: str,
+        price: str,
+        quantity: str,
+        client_id: str = None,
+        cancel_id: str = None,
+    ):
+        return self.sync_client.private.create_order(
+            position_id=self.sync_client.private.get_account()["account"][
+                "positionId"
+            ],
+            market=symbol,
+            side=side,
+            order_type=ORDER_TYPE_LIMIT,
+            post_only=False,
+            size=str(quantity),
+            price=str(price),
+            limit_fee="0.015",
+            time_in_force=TIME_IN_FORCE_GTT,
+            expiration_epoch_seconds=10613988637,
+            client_id=client_id,
+            cancel_id=cancel_id,
         )
 
-    def add_symbols_subscription(self):
-        self.subscriptions.append(
-            {
-                "type": "subscribe",
-                "channel": "v3_markets",
-            }
+    @safe_execute
+    def send_trailing_stop_order(
+        self,
+        *,
+        symbol: str,
+        side: str,
+        price: str,
+        quantity: str,
+        trailing_percent: str,
+        client_id: str = None,
+    ):
+        return self.sync_client.private.create_order(
+            position_id=self.sync_client.private.get_account()["account"][
+                "positionId"
+            ],
+            market=symbol,
+            side=side,
+            size=str(quantity),
+            price=str(price),
+            order_type=ORDER_TYPE_TRAILING_STOP,
+            post_only=False,
+            trailing_percent=str(trailing_percent),
+            limit_fee="0.015",
+            time_in_force=TIME_IN_FORCE_GTT,
+            expiration_epoch_seconds=10613988637,
+            client_id=client_id,
         )
+
+    @safe_execute
+    def send_take_profit_order(
+        self,
+        *,
+        symbol: str,
+        side: str,
+        price: str,
+        quantity: str,
+        client_id: str = None,
+    ):
+        return self.sync_client.private.create_order(
+            position_id=self.sync_client.private.get_account()["account"][
+                "positionId"
+            ],
+            market=symbol,
+            side=side,
+            order_type=ORDER_TYPE_TAKE_PROFIT,
+            post_only=False,
+            size=str(quantity),
+            price=str(price),
+            trigger_price=str(price),
+            limit_fee="0.015",
+            time_in_force=TIME_IN_FORCE_GTT,
+            expiration_epoch_seconds=10613988637,
+            client_id=client_id,
+        )
+
+    @safe_execute
+    def send_market_order(
+        self,
+        *,
+        symbol: str,
+        side: str,
+        price: str,
+        quantity: str,
+        client_id: str = None,
+    ):
+        return self.sync_client.private.create_order(
+            position_id=self.sync_client.private.get_account()["account"][
+                "positionId"
+            ],
+            market=symbol,
+            side=side,
+            order_type=ORDER_TYPE_MARKET,
+            post_only=False,
+            size=str(quantity),
+            price=str(price),
+            limit_fee="0.015",
+            time_in_force=TIME_IN_FORCE_FOK,
+            expiration_epoch_seconds=10613988637,
+            client_id=client_id,
+        )
+
+    @safe_execute
+    def cancel_order(self, order_id) -> None:
+        return self.sync_client.private.cancel_order(order_id=str(order_id))
+
+    @safe_execute
+    def cancel_all_orders(self, market) -> None:
+        return self.sync_client.private.cancel_all_orders(market=market)
 
     async def subscribe_and_recieve(self) -> None:
-        async with websockets.connect(WS_HOST_MAINNET) as websocket:
+        async with websockets.connect(self.network.ws_host) as websocket:
             for request in self.subscriptions:
                 await websocket.send(json.dumps(request))
 
@@ -241,32 +318,78 @@ class DydxConnector:
                                 trade["size"] = float(trade["size"])
                                 trade["recieveTime"] = now
                                 self._call_trade_listeners(trade)
+                    elif update["channel"] == "v3_accounts":
+                        self._call_account_listeners(update)
 
     def add_orderbook_listener(self, listener) -> None:
         self.orderbook_listeners.append(listener)
-        for symbol in self.symbols:
-            self.add_orderbook_subscription(symbol)
+
+    def add_account_listener(self, listener) -> None:
+        self.account_listeners.append(listener)
 
     def add_trade_listener(self, listener) -> None:
         self.trades_listeners.append(listener)
-        for symbol in self.symbols:
-            self.add_trade_subscription(symbol)
 
-    def _call_orderbook_listeners(self, orderbook_update) -> None:
-        symbol = orderbook_update["id"]
-        if orderbook_update["type"] == "subscribed":
+    def add_orderbook_subscription(self, symbol: str) -> None:
+        self.subscriptions.append(
+            {
+                "type": "subscribe",
+                "channel": "v3_orderbook",
+                "id": symbol,
+                "includeOffsets": True,
+            }
+        )
+
+    def add_account_subscription(self) -> None:
+        now_iso_string = generate_now_iso()
+        signature = self.get_client().private.sign(
+            request_path="/ws/accounts",
+            method="GET",
+            iso_timestamp=now_iso_string,
+            data={},
+        )
+        self.subscriptions.append(
+            {
+                "type": "subscribe",
+                "channel": "v3_accounts",
+                "accountNumber": "0",
+                "apiKey": self.get_client().api_key_credentials["key"],
+                "passphrase": self.get_client().api_key_credentials[
+                    "passphrase"
+                ],
+                "timestamp": now_iso_string,
+                "signature": signature,
+            }
+        )
+
+    def add_trade_subscription(self, symbol: str) -> None:
+        self.subscriptions.append(
+            {
+                "type": "subscribe",
+                "channel": "v3_trades",
+                "id": symbol,
+            }
+        )
+
+    def _call_orderbook_listeners(self, update) -> None:
+        symbol = update["id"]
+        if update["type"] == "subscribed":
             is_first_request = True
-        elif orderbook_update["type"] == "channel_data":
+        elif update["type"] == "channel_data":
             is_first_request = False
         self.order_book[symbol].update_orders(
-            orderbook_update["contents"], is_first_request=is_first_request
+            update["contents"], is_first_request=is_first_request
         )
         for listener in self.orderbook_listeners:
-            listener(orderbook_update)
+            listener(update)
 
-    def _call_trade_listeners(self, trade_update) -> None:
+    def _call_account_listeners(self, update) -> None:
+        for listener in self.account_listeners:
+            listener(update)
+
+    def _call_trade_listeners(self, update) -> None:
         for listener in self.trades_listeners:
-            listener(trade_update)
+            listener(update)
 
     async def async_start(self) -> None:
         while True:

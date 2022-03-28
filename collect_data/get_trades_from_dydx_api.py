@@ -1,5 +1,3 @@
-import os
-import sys
 import pandas as pd
 from datetime import datetime
 from connectors.dydx.connector import DydxConnector
@@ -10,14 +8,8 @@ from utils.helpful_scripts import string_to_datetime
 def get_trades_from_dydx_api(
     symbol: str, start_dt: datetime, end_dt: datetime
 ) -> pd.DataFrame:
-    ETH_ADDRESS = os.getenv("ETH_ADDRESS")
-    ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
-    INFURA_NODE = os.getenv("INFURA_NODE")
     dydx_connector_trades = DydxConnector(
-        ETH_ADDRESS,
-        ETH_PRIVATE_KEY,
         [symbol],
-        INFURA_NODE,
     )
 
     return pd.DataFrame(

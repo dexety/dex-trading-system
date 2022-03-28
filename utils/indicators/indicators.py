@@ -52,9 +52,12 @@ class Indicators:
         n_trades_ago_list: list,
     ) -> None:
 
-        indicators_punch_values[
-            "seconds-since-midnight"
-        ] = Indicators.seconds_since_midnight(queue.common_queue[-1])
+        indicators_punch_values["seconds-since-midnight"] = int(
+            (
+                queue.to_dt
+                - queue.to_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            ).total_seconds()
+        )
         indicators_punch_values["date"] = string_to_datetime(
             queue.common_queue[-1]["createdAt"]
         ).date()
@@ -92,24 +95,9 @@ class Indicators:
             return
         diff = (
             queue.to_dt
-            - string_to_datetime(
-                queue[side][
-                    max(
-                        0,
-                        len(queue[side]) - n_trades_ago - 1,
-                    )
-                ]["createdAt"]
-            )
+            - string_to_datetime(queue[side][-n_trades_ago]["createdAt"])
         ).total_seconds()
         indicators_values[column_name] = diff
-
-    @staticmethod
-    def seconds_since_midnight(trade) -> int:
-        current_trade_dt = string_to_datetime(trade["createdAt"])
-        midnight = current_trade_dt.replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        return (current_trade_dt - midnight).seconds
 
     @staticmethod
     def WI_exp_moving_average(

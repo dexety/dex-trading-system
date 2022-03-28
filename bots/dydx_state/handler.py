@@ -6,18 +6,9 @@ from telebot.types import Message
 from connectors.dydx.connector import DydxConnector
 
 TOKEN = os.getenv("LLV_DYDX")
-ETH_ADDRESS = os.getenv("ETH_ADDRESS")
-ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
-INFURA_NODE = os.getenv("INFURA_NODE")
-
 bot = TeleBot(TOKEN, parse_mode=None)
 
-dydx_connector = DydxConnector(
-    ETH_ADDRESS,
-    ETH_PRIVATE_KEY,
-    [],
-    INFURA_NODE,
-)
+dydx_connector = DydxConnector()
 
 
 class CommandsQueue:
