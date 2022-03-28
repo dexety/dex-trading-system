@@ -1,7 +1,5 @@
 import json
 import os
-import tqdm
-import websockets
 import asyncio
 
 from typing import Callable
@@ -9,6 +7,9 @@ from functools import wraps
 from datetime import datetime
 from dataclasses import dataclass
 from web3 import Web3
+from tqdm import tqdm
+
+import websockets
 
 from dydx3 import Client
 from dydx3.helpers.request_helpers import generate_now_iso
