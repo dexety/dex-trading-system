@@ -1,11 +1,7 @@
 import os
-import sys
 import json
 import argparse
 from datetime import datetime
-
-sys.path.append("../")
-
 from connectors.dydx.connector import DydxConnector
 
 ETH_ADDRESS = os.getenv("ETH_ADDRESS")
@@ -38,7 +34,7 @@ def on_trade_update(update):
 
 
 def main():
-    dydx_connector = DydxConnector(ETH_ADDRESS, ETH_PRIVATE_KEY, symbols)
+    dydx_connector = DydxConnector(symbols)
     dydx_connector.add_trade_listener(on_trade_update)
     dydx_connector.start()
 

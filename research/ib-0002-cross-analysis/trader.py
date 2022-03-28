@@ -17,7 +17,7 @@ def string_to_datetime(string_time: str) -> datetime:
 
 def custom_exception_handler(loop, context):
     loop.default_exception_handler(context)
-    exception = context.get('exception')
+    exception = context.get("exception")
     if isinstance(exception, Exception):
         loop.stop()
         loop.close()
@@ -29,7 +29,7 @@ def handle_task_result(task: asyncio.Task) -> None:
     except asyncio.CancelledError:
         pass
     except Exception as error:
-        Logger_debug.exception('Exception raised by task = %r', task)
+        Logger_debug.exception("Exception raised by task = %r", task)
         raise error
 
 
@@ -46,20 +46,20 @@ class Trader:
     socket_binance = f"wss://dstream.binance.com/ws/{symbol_binance}@trade"
     socket_dydx = f"wss://api.stage.dydx.exchange/v3/ws"
     connector = DydxConnector(
-        "0x5e1F56e732C6e0C465B67a59fC96E862172D192B",
-        "c559757ab5c49310a44f57a958de1f8e4af64588dd6e809322bd75683bab501a",
         [MARKET_ETH_USD],
     )
     loop = asyncio.get_event_loop()
 
-    def __init__(self,
-                 trailing_percent: float = 0.14,
-                 quantity: float = 0.02,
-                 profit_threshold: float = 0.1,
-                 sec_to_wait: float = 20,
-                 sec_after_trade: float = 0,
-                 signal_threshold: float = 0.0001,
-                 market=MARKET_ETH_USD):
+    def __init__(
+        self,
+        trailing_percent: float = 0.14,
+        quantity: float = 0.02,
+        profit_threshold: float = 0.1,
+        sec_to_wait: float = 20,
+        sec_after_trade: float = 0,
+        signal_threshold: float = 0.0001,
+        market=MARKET_ETH_USD,
+    ):
         self.trailing_percent = trailing_percent
         self.quantity = quantity
         self.profit_threshold = profit_threshold
@@ -69,7 +69,11 @@ class Trader:
         self.signal_threshold = signal_threshold
 
     def get_trailing_percent(self):
-        return self.trailing_percent if self.opp_side == "BUY" else 0 - self.trailing_percent
+        return (
+            self.trailing_percent
+            if self.opp_side == "BUY"
+            else 0 - self.trailing_percent
+        )
 
     def get_price(self, opposite: bool):
         if opposite:
@@ -77,17 +81,27 @@ class Trader:
         return 1 if self.side == "SELL" else 10 ** 8
 
     async def _listen_binance(self):
-        async with websockets.connect(self.socket_binance, ping_interval=None) as sock:
+        async with websockets.connect(
+            self.socket_binance, ping_interval=None
+        ) as sock:
             while True:
                 data = await sock.recv()
                 json_data = json.loads(data)
-                if not self.is_market_sent and not self.is_limit_sent and not json_data["m"]:
-                    if self.sliding_window.push_back(float(json_data["p"]), json_data["T"]):
+                if (
+                    not self.is_market_sent
+                    and not self.is_limit_sent
+                    and not json_data["m"]
+                ):
+                    if self.sliding_window.push_back(
+                        float(json_data["p"]), json_data["T"]
+                    ):
                         max_in_window = self.sliding_window.get_max()
                         max_timestamp = self.sliding_window.get_max_timestamp()
                         min_in_window = self.sliding_window.get_min()
                         min_timestamp = self.sliding_window.get_min_timestamp()
-                        if max_in_window / min_in_window >= (1 + self.signal_threshold):
+                        if max_in_window / min_in_window >= (
+                            1 + self.signal_threshold
+                        ):
                             if max_timestamp > min_timestamp:
                                 self.side = "BUY"
                                 self.opp_side = "SELL"
@@ -110,7 +124,9 @@ class Trader:
     async def _close_positions(self):
         while True:
             if self.is_market_sent and self.is_limit_sent:
-                if datetime.now() >= (self.dispatch_time + timedelta(seconds=20)):
+                if datetime.now() >= (
+                    self.dispatch_time + timedelta(seconds=20)
+                ):
                     Logger_trades.info("Cancel,TimeOut")
                     self.connector.cancel_all_orders(market=self.market)
                     Logger_trades.info(f"Market,Close,{self.opp_side}")
@@ -125,7 +141,9 @@ class Trader:
             await asyncio.sleep(1 / 100)
 
     async def _listen_our_trades(self):
-        async with websockets.connect(self.socket_dydx, ping_interval=None) as sock:
+        async with websockets.connect(
+            self.socket_dydx, ping_interval=None
+        ) as sock:
             await sock.send(json.dumps(self.req))
             await sock.recv()  # trash response
             await sock.recv()  # trash response
@@ -134,18 +152,27 @@ class Trader:
                 if self.is_market_sent:
                     json_data = json.loads(data)
                     if not self.is_limit_sent:
-                        if "fills" in json_data["contents"] and json_data["contents"]["fills"]:
+                        if (
+                            "fills" in json_data["contents"]
+                            and json_data["contents"]["fills"]
+                        ):
                             self.is_limit_sent = True
-                            Logger_trades.info(f"Trailing,{self.opp_side},{str(self.trailing_percent)}")
+                            Logger_trades.info(
+                                f"Trailing,{self.opp_side},{str(self.trailing_percent)}"
+                            )
                             self.connector.send_trailing_stop_order(
                                 symbol=self.market,
                                 side=self.opp_side,
                                 price=self.get_price(opposite=True),
                                 quantity=self.quantity,
-                                trailing_percent=self.get_trailing_percent()
+                                trailing_percent=self.get_trailing_percent(),
                             )
-                            price = float(json_data["contents"]["fills"][0]["price"]) * (1 + self.profit_threshold)
-                            Logger_trades.info(f"Limit,{self.opp_side},{str(price)}")
+                            price = float(
+                                json_data["contents"]["fills"][0]["price"]
+                            ) * (1 + self.profit_threshold)
+                            Logger_trades.info(
+                                f"Limit,{self.opp_side},{str(price)}"
+                            )
                             self.connector.send_limit_order(
                                 symbol=self.market,
                                 side=self.opp_side,
@@ -153,7 +180,10 @@ class Trader:
                                 quantity=self.quantity,
                             )
                     else:
-                        if "fills" in json_data["contents"] and json_data["contents"]["fills"]:
+                        if (
+                            "fills" in json_data["contents"]
+                            and json_data["contents"]["fills"]
+                        ):
                             Logger_trades.info("Cancel,Filled")
                             self.connector.cancel_all_orders(market=self.market)
                             self.is_limit_sent = False
@@ -183,9 +213,17 @@ class Trader:
 
     def _setup(self):
         self.loop.set_exception_handler(custom_exception_handler)
-        tasks = [self.loop.create_task(self._listen_binance(), name="listen binance"),
-                 self.loop.create_task(self._listen_our_trades(), name="listen our trades"),
-                 self.loop.create_task(self._close_positions(), name="close positions")]
+        tasks = [
+            self.loop.create_task(
+                self._listen_binance(), name="listen binance"
+            ),
+            self.loop.create_task(
+                self._listen_our_trades(), name="listen our trades"
+            ),
+            self.loop.create_task(
+                self._close_positions(), name="close positions"
+            ),
+        ]
         for task in tasks:
             task.add_done_callback(handle_task_result)
 

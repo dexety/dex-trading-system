@@ -1,27 +1,14 @@
 import os
-import sys
 import json
 import asyncio
 from telebot import TeleBot
 from telebot.types import Message
-
-sys.path.append("../../")
-
 from connectors.dydx.connector import DydxConnector
 
 TOKEN = os.getenv("LLV_DYDX")
-ETH_ADDRESS = os.getenv("ETH_ADDRESS")
-ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
-INFURA_NODE = os.getenv("INFURA_NODE")
-
 bot = TeleBot(TOKEN, parse_mode=None)
 
-dydx_connector = DydxConnector(
-    ETH_ADDRESS,
-    ETH_PRIVATE_KEY,
-    [],
-    INFURA_NODE,
-)
+dydx_connector = DydxConnector()
 
 
 class CommandsQueue:

@@ -4,10 +4,6 @@ import json
 from catboost import CatBoostClassifier, Pool, metrics
 from sklearn.metrics import accuracy_score
 import random
-import sys
-
-sys.path.append("../../")
-
 from utils.logger.logger import Logger
 
 

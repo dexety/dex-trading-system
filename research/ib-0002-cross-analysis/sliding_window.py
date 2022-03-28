@@ -9,7 +9,7 @@ class SlidingWindow:
         self.start_calc = datetime.now()
         self.mins = deque()
         self.maxs = deque()
-        self.window_size = 1000 * 10**3  # nanoseconds
+        self.window_size = 1000 * 10 ** 3  # nanoseconds
 
     def clear(self):
         self.trades_timestamps.clear()
@@ -28,12 +28,12 @@ class SlidingWindow:
 
     def get_min(self) -> float:
         if len(self.mins) == 0:
-            return 10**8
+            return 10 ** 8
         return self.mins[0][0]
 
     def get_max(self) -> float:
         if len(self.maxs) == 0:
-            return -10**8
+            return -(10 ** 8)
         return self.maxs[0][0]
 
     def get_last_trade(self) -> int:
@@ -46,8 +46,10 @@ class SlidingWindow:
             return 2239499954238  # some big timestamp
         return self.trades_timestamps[0]
 
-    def push_back(self, price: float, timestamp: int) -> bool:  # returns true if min or max is changed
-        self.start_calc = datetime.now().timestamp() * 10**3
+    def push_back(
+        self, price: float, timestamp: int
+    ) -> bool:  # returns true if min or max is changed
+        self.start_calc = datetime.now().timestamp() * 10 ** 3
         changes = False
         if timestamp < self.get_last_trade():
             return changes
@@ -75,5 +77,5 @@ class SlidingWindow:
         self.maxs.append((price, timestamp))
         if old_max != self.get_max():
             changes = True
-        self.end_calc = datetime.now().timestamp() * 10**3
+        self.end_calc = datetime.now().timestamp() * 10 ** 3
         return changes

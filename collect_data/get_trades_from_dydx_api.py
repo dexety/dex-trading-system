@@ -1,45 +1,62 @@
-import os
-import sys
-import json
+import pandas as pd
 from datetime import datetime
-
-sys.path.append("../")
-
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
+from utils.helpful_scripts import string_to_datetime
 
 
 def get_trades_from_dydx_api(
     symbol: str, start_dt: datetime, end_dt: datetime
-) -> dict:
-    ETH_ADDRESS = os.getenv("ETH_ADDRESS")
-    ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
-    INFURA_NODE = os.getenv("INFURA_NODE")
+) -> pd.DataFrame:
     dydx_connector_trades = DydxConnector(
-        ETH_ADDRESS,
-        ETH_PRIVATE_KEY,
         [symbol],
-        INFURA_NODE,
     )
-    return dydx_connector_trades.get_historical_trades(symbol, start_dt, end_dt)
+
+    return pd.DataFrame(
+        dydx_connector_trades.get_historical_trades(symbol, start_dt, end_dt)
+    )
 
 
 def get_formated_dt(dt: datetime) -> str:
-    return f"{dt.year}_{dt.month}_{dt.day}_{dt.hour}_{dt.minute}_{dt.second}"
+    return f"{dt.day:02d}-{dt.month:02d}-{dt.year}"
 
 
 def main():
-    print("collection of trades begin")
-    print("it may takes a lot of time")
-    start_dt = datetime(2021, 7, 21)
-    end_dt = datetime(2022, 1, 21)
-    trades_data = get_trades_from_dydx_api(MARKET_ETH_USD, start_dt, end_dt)
+    print("Collection of trades initiated...")
+    print("***It may take a lot of time***")
+    start_dt = datetime(2022, 2, 7, 15)
+    end_dt = datetime.utcnow()
+    trades: pd.DataFrame = get_trades_from_dydx_api(
+        MARKET_ETH_USD, start_dt, end_dt
+    )
+
+    print("Trades collected.")
+    print("Cleaning initiated...")
+    trades_to_drop = []
+    cur_dt = string_to_datetime(trades.iloc[0].createdAt)
+    for i in range(trades.shape[0]):
+        new_dt = string_to_datetime(trades.iloc[i].createdAt)
+        if new_dt < cur_dt:
+            trades_to_drop.append(i)
+        else:
+            cur_dt = new_dt
+        if i % 100000 == 0:
+            print(
+                f"\r{str(i * 100 / trades.shape[0])}% cleaned. {len(trades_to_drop)} redundant trades found",
+                end="",
+            )
+
+    trades = trades.drop(axis=0, index=trades_to_drop)
+
+    print("Trades cleaned. Writing to output file...")
+
     with open(
-        f"../data/trades/raw/trades-{get_formated_dt(start_dt)}-{get_formated_dt(end_dt)}.json",
+        f"../data/trades/raw/trades_{get_formated_dt(start_dt)}_{get_formated_dt(end_dt)}.csv",
         "w",
         encoding="utf8",
-    ) as file:
-        json.dump(trades_data, file)
+    ) as csvfile:
+        trades.to_csv(csvfile, index=False)
+    print("Done")
 
 
 if __name__ == "__main__":

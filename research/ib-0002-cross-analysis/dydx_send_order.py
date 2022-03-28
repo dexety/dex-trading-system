@@ -19,9 +19,9 @@ dydx_connector = DydxConnector(
 )
 
 order = dydx_connector.send_trailing_stop_order(
-                            symbol=MARKET_ETH_USD,
-                            side="BUY",
-                            price=10**8,
-                            quantity=0.02,
-                            trailing_percent=0.14,
-                        )
+    symbol=MARKET_ETH_USD,
+    side="BUY",
+    price=10 ** 8,
+    quantity=0.02,
+    trailing_percent=0.14,
+)

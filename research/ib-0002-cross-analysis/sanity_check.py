@@ -9,10 +9,10 @@ usd = 100
 with open("trades.txt") as f:
     for line in f.readlines():
         line = list(line.split())
-        usd *= (1 - 0.0005)**2
+        usd *= (1 - 0.0005) ** 2
         if line[0] == "SHORT":
             total_shorts += 1
-            sell = float(line[4][0:len(line[4])-1])
+            sell = float(line[4][0 : len(line[4]) - 1])
             buy = float(line[-1])
             if sell / buy >= (1 + 0.00101):
                 success_shorts += 1
@@ -21,7 +21,7 @@ with open("trades.txt") as f:
             usd *= sell / buy
         else:
             total_longs += 1
-            buy = float(line[4][0:len(line[4])-1])
+            buy = float(line[4][0 : len(line[4]) - 1])
             sell = float(line[-1])
             if sell / buy >= (1 + 0.00101):
                 success_longs += 1
@@ -30,5 +30,9 @@ with open("trades.txt") as f:
             usd *= sell / buy
 
 print(f"PROFIT: {usd - 100}")
-print(f"TOTAL LONGS: {total_longs}\tSUCCESS LONGS: {success_longs}\tBAD_LONGS: {bad_longs}")
-print(f"TOTAL SHORTS: {total_shorts}\tSUCCESS SHORTS: {success_shorts}\tBAD_SHORTS: {bad_shorts}")
+print(
+    f"TOTAL LONGS: {total_longs}\tSUCCESS LONGS: {success_longs}\tBAD_LONGS: {bad_longs}"
+)
+print(
+    f"TOTAL SHORTS: {total_shorts}\tSUCCESS SHORTS: {success_shorts}\tBAD_SHORTS: {bad_shorts}"
+)

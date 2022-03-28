@@ -24,14 +24,12 @@ ETH_PRIVATE_KEY = ""
 # INFURA_NODE = os.getenv("INFURA_NODE")
 
 
-
 client = Client(
     network_id=NETWORK_ID_ROPSTEN,
     host=API_HOST_ROPSTEN,
     default_ethereum_address=ETH_KEY,
     eth_private_key=ETH_PRIVATE_KEY,
     web3=Web3(Web3.HTTPProvider("http://localhost:8545")),
-
 )
 
 print(client.api_key_credentials["passphrase"])
@@ -40,8 +38,6 @@ print(client.api_key_credentials["passphrase"])
 stark_private_key = client.onboarding.derive_stark_key()
 client.stark_private_key = stark_private_key
 public_x, public_y = private_key_to_public_key_pair_hex(stark_private_key)
-
-
 
 
 now_iso_string = generate_now_iso()
@@ -56,9 +52,7 @@ req = {
     "channel": "v3_accounts",
     "accountNumber": "0",
     "apiKey": client.api_key_credentials["key"],
-    "passphrase": client.api_key_credentials[
-                "passphrase"
-    ],
+    "passphrase": client.api_key_credentials["passphrase"],
     "timestamp": now_iso_string,
     "signature": signature,
 }
@@ -75,6 +69,7 @@ async def get_our_trades():
             data = await sock.recv()
             json_data = json.loads(data)
             print(json_data)
+
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(get_our_trades())

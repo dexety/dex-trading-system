@@ -1,15 +1,9 @@
-import os
-import sys
 import time
 import argparse
 from functools import wraps
 from threading import Thread, Lock
 from datetime import datetime, timedelta
-
 from dydx3.errors import DydxApiError
-
-sys.path.append("../../")
-
 from connectors.dydx.connector import DydxConnector, safe_execute
 from connectors.dydx.order_book_cache import OrderBookCache
 from utils.logger.logger import Logger
@@ -32,10 +26,6 @@ def too_many_requests_guard(function):
 
 
 class MarketMakingStrategy:
-    ETH_ADDRESS = os.getenv("ETH_ADDRESS")
-    ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
-    INFURA_NODE = os.getenv("INFURA_NODE")
-
     update_processing_ms = 100
     order_expiration_time_sec = 30
     order_checker_period_sec = 0.3
@@ -60,16 +50,10 @@ class MarketMakingStrategy:
         else:
             raise Exception("Unsupported symbol")
         self.dydx_connector_trades = DydxConnector(
-            self.ETH_ADDRESS,
-            self.ETH_PRIVATE_KEY,
             [symbol],
-            self.INFURA_NODE,
         )
         self.dydx_connector_order_book = DydxConnector(
-            self.ETH_ADDRESS,
-            self.ETH_PRIVATE_KEY,
             [symbol],
-            self.INFURA_NODE,
         )
         self.dydx_connector_trades.add_trade_listener(self.on_trade_update)
         self.dydx_connector_order_book.add_orderbook_listener(

@@ -1,12 +1,7 @@
 from asyncio.runners import run
 import json
 import asyncio
-import sys
-
 from connectors.dydx.connector import DydxConnector
-
-sys.path.append("../../")
-
 from utils.logger.logger import Logger
 from my_queue import Queue
 from connectors.binance.connector import BinanceConnector
