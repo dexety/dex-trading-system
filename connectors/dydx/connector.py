@@ -1,11 +1,13 @@
 import json
-from datetime import datetime
-from dataclasses import dataclass
 import os
+import tqdm
+import websockets
 import asyncio
+
 from typing import Callable
 from functools import wraps
-import websockets
+from datetime import datetime
+from dataclasses import dataclass
 from web3 import Web3
 
 from dydx3 import Client
@@ -150,6 +152,32 @@ class DydxConnector:
         else:
             positions = self.sync_client.private.get_positions(status=status)
         return positions
+
+    @safe_execute
+    def get_historical_trades(
+        self, symbol: str, start_dt: datetime, end_dt: datetime
+    ) -> list:
+        diff_seconds = int((end_dt - start_dt).total_seconds())
+        period_end_dt = end_dt
+        period_start_dt = end_dt
+        progress_bar = tqdm(range(diff_seconds))
+        trades = []
+        while period_end_dt > start_dt:
+            trades.extend(
+                self.sync_client.public.get_trades(symbol, period_end_dt)[
+                    "trades"
+                ]
+            )
+            period_start_dt = datetime.strptime(
+                trades[-1]["createdAt"], "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+            progress_bar.update(
+                int((period_end_dt - period_start_dt).total_seconds())
+            )
+            period_end_dt = period_start_dt
+
+        trades.reverse()
+        return trades
 
     @safe_execute
     def send_limit_order(
