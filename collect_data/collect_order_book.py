@@ -30,7 +30,7 @@ def on_order_book_update(update):
 
 
 def main():
-    dydx_connector = DydxConnector(ETH_ADDRESS, ETH_PRIVATE_KEY, symbols)
+    dydx_connector = DydxConnector(symbols)
     dydx_connector.add_orderbook_listener(on_order_book_update)
     dydx_connector.start()
 

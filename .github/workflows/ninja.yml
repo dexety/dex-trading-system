@@ -51,3 +51,4 @@ jobs:
           ETH_ADDRESS: ${{ secrets.ETH_ADDRESS }}
           ETH_PRIVATE_KEY: ${{ secrets.ETH_PRIVATE_KEY }}
           INFURA_NODE: ${{ secrets.INFURA_NODE }}
+          ROPSTEN_INFURA_NODE: ${{ secrets.ROPSTEN_INFURA_NODE }}

@@ -13,10 +13,7 @@ from connectors.dydx.connector import DydxConnector
 
 
 class SpeedMeasure:
-    ETH_KEY = os.getenv("ETH_ADDRESS")
-    ETH_SECRET = os.getenv("ETH_PRIVATE_KEY")
-    INFURA_NODE = os.getenv("INFURA_NODE")
-    connector = DydxConnector(ETH_KEY, ETH_SECRET, MARKET_ETH_USD, INFURA_NODE)
+    connector = DydxConnector(MARKET_ETH_USD)
     orders_info = {}
     connector_funcs_speed_info = {}
     iters_num = 0
