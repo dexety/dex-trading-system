@@ -19,9 +19,9 @@ sys.path.append("../../")
 
 from connectors.dydx.connector import DydxConnector, safe_execute
 
-ETH_KEY = ""
-ETH_PRIVATE_KEY = ""
-# INFURA_NODE = os.getenv("INFURA_NODE")
+ETH_KEY = os.getenv("ETH_ADDRESS")
+ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
+INFURA_NODE = os.getenv("ROPSTEN_INFURA_NODE")
 
 
 client = Client(
@@ -29,11 +29,10 @@ client = Client(
     host=API_HOST_ROPSTEN,
     default_ethereum_address=ETH_KEY,
     eth_private_key=ETH_PRIVATE_KEY,
-    web3=Web3(Web3.HTTPProvider("http://localhost:8545")),
+    web3=Web3(Web3.HTTPProvider(INFURA_NODE)),
 )
 
 print(client.api_key_credentials["passphrase"])
-
 
 stark_private_key = client.onboarding.derive_stark_key()
 client.stark_private_key = stark_private_key
@@ -68,7 +67,7 @@ async def get_our_trades():
         while True:
             data = await sock.recv()
             json_data = json.loads(data)
-            print(json_data)
+            print(json.dumps(json_data, indent=4))
 
 
 loop = asyncio.get_event_loop()
