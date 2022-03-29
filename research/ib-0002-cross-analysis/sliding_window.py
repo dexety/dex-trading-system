@@ -5,11 +5,9 @@ from datetime import datetime
 class SlidingWindow:
     def __init__(self):
         self.trades_timestamps = deque()
-        self.end_calc = datetime.now()
-        self.start_calc = datetime.now()
         self.mins = deque()
         self.maxs = deque()
-        self.window_size = 1000 * 10 ** 3  # nanoseconds
+        self.window_size = 1000
 
     def clear(self):
         self.trades_timestamps.clear()
@@ -49,7 +47,6 @@ class SlidingWindow:
     def push_back(
         self, price: float, timestamp: int
     ) -> bool:  # returns true if min or max is changed
-        self.start_calc = datetime.now().timestamp() * 10 ** 3
         changes = False
         if timestamp < self.get_last_trade():
             return changes
@@ -77,5 +74,4 @@ class SlidingWindow:
         self.maxs.append((price, timestamp))
         if old_max != self.get_max():
             changes = True
-        self.end_calc = datetime.now().timestamp() * 10 ** 3
         return changes
