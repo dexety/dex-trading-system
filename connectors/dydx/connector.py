@@ -199,8 +199,8 @@ class DydxConnector:
             side=side,
             order_type=ORDER_TYPE_LIMIT,
             post_only=False,
-            size=str(quantity),
-            price=str(price),
+            size=quantity,
+            price=price,
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_GTT,
             expiration_epoch_seconds=10613988637,
@@ -225,11 +225,11 @@ class DydxConnector:
             ],
             market=symbol,
             side=side,
-            size=str(quantity),
-            price=str(price),
+            size=quantity,
+            price=price,
             order_type=ORDER_TYPE_TRAILING_STOP,
             post_only=False,
-            trailing_percent=str(trailing_percent),
+            trailing_percent=trailing_percent,
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_GTT,
             expiration_epoch_seconds=10613988637,
@@ -254,9 +254,9 @@ class DydxConnector:
             side=side,
             order_type=ORDER_TYPE_TAKE_PROFIT,
             post_only=False,
-            size=str(quantity),
-            price=str(price),
-            trigger_price=str(price),
+            size=quantity,
+            price=price,
+            trigger_price=price,
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_GTT,
             expiration_epoch_seconds=10613988637,
@@ -281,8 +281,8 @@ class DydxConnector:
             side=side,
             order_type=ORDER_TYPE_MARKET,
             post_only=False,
-            size=str(quantity),
-            price=str(price),
+            size=quantity,
+            price=price,
             limit_fee="0.015",
             time_in_force=TIME_IN_FORCE_FOK,
             expiration_epoch_seconds=10613988637,
@@ -294,8 +294,8 @@ class DydxConnector:
         return self.sync_client.private.cancel_order(order_id=str(order_id))
 
     @safe_execute
-    def cancel_all_orders(self, market) -> None:
-        return self.sync_client.private.cancel_all_orders(market=market)
+    def cancel_all_orders(self, symbol) -> None:
+        return self.sync_client.private.cancel_all_orders(market=symbol)
 
     async def subscribe_and_recieve(self) -> None:
         async with websockets.connect(self.network.ws_host) as websocket:
