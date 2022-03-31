@@ -103,7 +103,7 @@ class Trader:
     def _get_worst_price(self, side: str) -> str:
         return str(1 if side == "SELL" else 10 ** 8)
 
-    def _get_profit(self, closed_by_limit):
+    def _get_profit(self, closed_by_limit=False):
         closing_price_with_comission = float(self.closing_fill["price"]) * (1 - self.maker_comission if closed_by_limit else self.taker_comission)
         opening_price_with_comission = float(self.openeng_fill["price"]) * (1 - self.taker_comission)
         return (closing_price_with_comission - opening_price_with_comission) * self.quantity * (-1 if self.side == "SELL" else 1)
@@ -162,7 +162,7 @@ class Trader:
                             if self.mirror_filled.is_set():
                                 if self.is_limit_filled:
                                     TradeLogger.info(
-                                        f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
+                                        f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit(closed_by_limit=True)}"
                                     )
                                 elif self.is_trailing_filled:
                                     TradeLogger.info(
@@ -177,7 +177,7 @@ class Trader:
                                     await self.limit_filled_or_canceled.wait()
                                     if self.is_limit_filled:
                                         TradeLogger.info(
-                                            f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
+                                            f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit(closed_by_limit=True)}"
                                         )
                                         continue
 
