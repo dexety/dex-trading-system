@@ -3,8 +3,8 @@ import websockets
 import json
 import contextlib
 from datetime import datetime
-from datetime import timedelta
 from sliding_window import SlidingWindow
+from my_queue import Queue
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_BTC_USD, MARKET_ETH_USD, ORDER_SIDE_BUY
 from utils.logger.trader_logger import DebugLogger, TradeLogger
@@ -59,7 +59,7 @@ class Trader:
 
         self.start_time = datetime.now()
         self.dispatch_time = datetime.now()
-        self.sliding_window = SlidingWindow()
+        self.sliding_window = Queue()
 
         self.market_filled_or_canceled = asyncio.Event()
         self.limit_filled_or_canceled = asyncio.Event()
@@ -79,7 +79,7 @@ class Trader:
 
         self.dydx_connector = DydxConnector(
             symbols=[MARKET_ETH_USD],
-            network="ropsten",
+            network="mainnet",
         )
 
         self.loop = asyncio.get_event_loop()
@@ -121,90 +121,93 @@ class Trader:
                 # T -- milliseconds timestamp
                 # p -- price
                 if (not trade["m"] and trade["T"] / 1000 > self.dispatch_time.second + self.sec_to_wait + 0.5):
-                    if self.sliding_window.push_back(
-                        float(trade["p"]), trade["T"]
-                    ):
-                        max_in_window = self.sliding_window.get_max()
-                        max_timestamp = self.sliding_window.get_max_timestamp()
-                        min_in_window = self.sliding_window.get_min()
-                        min_timestamp = self.sliding_window.get_min_timestamp()
-                        if max_in_window / min_in_window >= 1 + self.signal_threshold:
-                            TradeLogger.info("--------------------------------------------------------------")
-                            self.cycle_counter += 1
+                    self.sliding_window.push((float(trade["p"]), trade["T"]))
+                    while (self.sliding_window.size() > 0 and self.sliding_window.back()[1] < (datetime.now().timestamp() - 1) * 1000):
+                        self.sliding_window.pop()
 
-                            if max_timestamp > min_timestamp:
-                                self.side = "BUY"
-                                self.opp_side = "SELL"
-                            else:
-                                self.side = "SELL"
-                                self.opp_side = "BUY"
+                    if self.sliding_window.size() == 0:
+                        continue
 
-                            self.dispatch_time = datetime.now()
-                            self._send_market()
-                            TradeLogger.info(f"cycle {self.cycle_counter} | market sent | side: {self.side}")
+                    print(*list(map(lambda x: x[0], reversed(self.sliding_window.tail.stack))), *list(map(lambda x: x[0], self.sliding_window.head.stack)))
+                    (max_in_window, max_timestamp) = self.sliding_window.max()
+                    (min_in_window, min_timestamp) = self.sliding_window.min()
+                    print(max_in_window / min_in_window)
 
-                            await self.market_filled_or_canceled.wait()
-                            if not self.is_market_filled:
-                                self._reset()
-                                continue
+                    if max_in_window / min_in_window >= 1 + self.signal_threshold:
+                        TradeLogger.info("--------------------------------------------------------------")
+                        self.cycle_counter += 1
 
-                            limit_price = self._get_limit_price(self.openeng_fill["price"])
+                        if max_timestamp > min_timestamp:
+                            self.side = "BUY"
+                            self.opp_side = "SELL"
+                        else:
+                            self.side = "SELL"
+                            self.opp_side = "BUY"
 
-                            self._send_limit(limit_price)
-                            # await self.limit_opened_or_canceled()
-                            # TODO: нужно будет обработать вариант, когда лимитка по какой то причине не поставилась. В таком случае закрываем позицию.
-                            TradeLogger.info(f"cycle {self.cycle_counter} | limit sent | {self.opp_side} | price: {limit_price}")
-                            self._send_trailing()
-                            # await self.trailing_opened_or_canceled()
-                            # TODO: то же самое, но еще нужно будет отменить limit
-                            TradeLogger.info(f"cycle {self.cycle_counter} | trailing sent | {self.opp_side} | percent: {self.trailing_percent}")
+                        self.dispatch_time = datetime.now()
+                        self._send_market()
+                        TradeLogger.info(f"cycle {self.cycle_counter} | market sent | side: {self.side}")
 
-                            with contextlib.suppress(asyncio.TimeoutError):
-                                await asyncio.wait_for(self.mirror_filled.wait(), self.sec_to_wait)
+                        await self.market_filled_or_canceled.wait()
+                        if not self.is_market_filled:
+                            self._reset()
+                            continue
 
-                            if self.mirror_filled.is_set():
+                        limit_price = self._get_limit_price(self.openeng_fill["price"])
+
+                        self._send_limit(limit_price)
+                        # await self.limit_opened_or_canceled()
+                        # TODO: нужно будет обработать вариант, когда лимитка по какой то причине не поставилась. В таком случае закрываем позицию.
+                        TradeLogger.info(f"cycle {self.cycle_counter} | limit sent | {self.opp_side} | price: {limit_price}")
+                        self._send_trailing()
+                        # await self.trailing_opened_or_canceled()
+                        # TODO: то же самое, но еще нужно будет отменить limit
+                        TradeLogger.info(f"cycle {self.cycle_counter} | trailing sent | {self.opp_side} | percent: {self.trailing_percent}")
+
+                        with contextlib.suppress(asyncio.TimeoutError):
+                            await asyncio.wait_for(self.mirror_filled.wait(), self.sec_to_wait)
+
+                        if self.mirror_filled.is_set():
+                            if self.is_limit_filled:
+                                TradeLogger.info(
+                                    f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit(closed_by_limit=True)}"
+                                )
+                            elif self.is_trailing_filled:
+                                TradeLogger.info(
+                                    f"cycle {self.cycle_counter} | trailing filled | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
+                                )
+                            self._cancel_orders()
+                        else:
+                            TradeLogger.info(f"cycle {self.cycle_counter} | timeout reached | cancelling all orders")
+                            self._cancel_orders()
+
+                            if self.is_limit_opened:
+                                await self.limit_filled_or_canceled.wait()
                                 if self.is_limit_filled:
                                     TradeLogger.info(
                                         f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit(closed_by_limit=True)}"
                                     )
-                                elif self.is_trailing_filled:
+                                    self._reset()
+                                    continue
+
+                            if self.is_trailing_opened:
+                                await self.trailing_filled_or_canceled.wait()
+                                if self.is_trailing_filled:
                                     TradeLogger.info(
                                         f"cycle {self.cycle_counter} | trailing filled | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
                                     )
-                                self._cancel_orders()
-                            else:
-                                TradeLogger.info(f"cycle {self.cycle_counter} | timeout reached | cancelling all orders")
-                                self._cancel_orders()
+                                    self._reset()
+                                    continue
 
-                                if self.is_limit_opened:
-                                    await self.limit_filled_or_canceled.wait()
-                                    if self.is_limit_filled:
-                                        TradeLogger.info(
-                                            f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit(closed_by_limit=True)}"
-                                        )
-                                        self._reset()
-                                        continue
+                            TradeLogger.info(f"cycle {self.cycle_counter} | orders canceled, closing position | {self.opp_side}")
+                            self._close_position()
+                            await self.position_closed.wait()
+                            TradeLogger.info(
+                                f"cycle {self.cycle_counter} | position closed | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
+                            )
+                            self._reset()
 
-                                if self.is_trailing_opened:
-                                    await self.trailing_filled_or_canceled.wait()
-                                    if self.is_trailing_filled:
-                                        TradeLogger.info(
-                                            f"cycle {self.cycle_counter} | trailing filled | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
-                                        )
-                                        self._reset()
-                                        continue
-
-                                TradeLogger.info(f"cycle {self.cycle_counter} | orders canceled, closing position | {self.opp_side}")
-                                self._close_position()
-                                await self.position_closed.wait()
-                                TradeLogger.info(
-                                    f"cycle {self.cycle_counter} | position closed | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
-                                )
-                                self._reset()
-    
     def _reset(self):
-        self.sliding_window.clear()
-
         self.market_filled_or_canceled.clear()
         self.limit_filled_or_canceled.clear()
         self.trailing_filled_or_canceled.clear()
