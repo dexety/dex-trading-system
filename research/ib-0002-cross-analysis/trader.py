@@ -260,6 +260,8 @@ class Trader:
 
 
     def _account_listener(self, account_update):
+        if "contents" not in account_update:
+            return
 
         if "fills" in account_update["contents"]:
             for fill in account_update["contents"]["fills"]:
@@ -276,36 +278,37 @@ class Trader:
                     self.is_closing_filled = True
                     self.closing_fill = fill
 
-        for order in account_update["contents"]["orders"]:
-            TradeLogger.info(f"UPDATE | {order['clientId']} {order['status']} | {order['cancelReason']}")
+        if "orders" in account_update["contents"]:
+            for order in account_update["contents"]["orders"]:
+                TradeLogger.info(f"UPDATE | {order['clientId']} {order['status']} | {order['cancelReason']}")
 
-            if order["status"] == "CANCELED":
-                if order["clientId"].startswith("mk"):
-                    self.market_filled_or_canceled.set()
-                elif order["clientId"].startswith("lm"):
-                    self.limit_filled_or_canceled.set()
-                elif order["clientId"].startswith("ts"):
-                    self.trailing_filled_or_canceled.set()
+                if order["status"] == "CANCELED":
+                    if order["clientId"].startswith("mk"):
+                        self.market_filled_or_canceled.set()
+                    elif order["clientId"].startswith("lm"):
+                        self.limit_filled_or_canceled.set()
+                    elif order["clientId"].startswith("ts"):
+                        self.trailing_filled_or_canceled.set()
 
-            elif order["status"] == "FILLED":
-                if order["clientId"].startswith("mk"):
-                    self.market_filled_or_canceled.set()
-                elif order["clientId"].startswith("lm"):
-                    self.limit_filled_or_canceled.set()
-                    self.mirror_filled.set()
-                elif order["clientId"].startswith("ts"):
-                    self.trailing_filled_or_canceled.set()
-                    self.mirror_filled.set()
-                elif order["clientId"].startswith("cp"):
-                    self.position_closed.set()
+                elif order["status"] == "FILLED":
+                    if order["clientId"].startswith("mk"):
+                        self.market_filled_or_canceled.set()
+                    elif order["clientId"].startswith("lm"):
+                        self.limit_filled_or_canceled.set()
+                        self.mirror_filled.set()
+                    elif order["clientId"].startswith("ts"):
+                        self.trailing_filled_or_canceled.set()
+                        self.mirror_filled.set()
+                    elif order["clientId"].startswith("cp"):
+                        self.position_closed.set()
 
-            elif order["status"] == "OPEN":
-                if order["clientId"].startswith('lm'):
-                    self.is_limit_opened = True
+                elif order["status"] == "OPEN":
+                    if order["clientId"].startswith('lm'):
+                        self.is_limit_opened = True
 
-            elif order["status"] == "UNTRIGGERED":
-                if order["clientId"].startswith('ts'):
-                    self.is_trailing_opened = True
+                elif order["status"] == "UNTRIGGERED":
+                    if order["clientId"].startswith('ts'):
+                        self.is_trailing_opened = True
 
 
     def _setup(self):
