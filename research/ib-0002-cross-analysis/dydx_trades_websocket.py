@@ -1,7 +1,4 @@
-import sys
 import os
-from datetime import datetime, timedelta
-from dydx3.helpers.request_helpers import generate_now_iso
 import websockets
 import json
 import asyncio
@@ -12,12 +9,7 @@ from dydx3 import Client
 from dydx3 import private_key_to_public_key_pair_hex
 from dydx3.constants import API_HOST_MAINNET, API_HOST_ROPSTEN
 from dydx3.constants import NETWORK_ID_MAINNET, NETWORK_ID_ROPSTEN
-
-from dydx3.constants import MARKET_BTC_USD, MARKET_ETH_USD, ORDER_SIDE_BUY
-
-sys.path.append("../../")
-
-from connectors.dydx.connector import DydxConnector, safe_execute
+from dydx3.helpers.request_helpers import generate_now_iso
 
 ETH_KEY = os.getenv("ETH_ADDRESS")
 ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
