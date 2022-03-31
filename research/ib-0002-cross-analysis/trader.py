@@ -39,10 +39,10 @@ class Trader:
         self,
         trailing_percent: float = 0.14,
         quantity: float = 0.01,
-        profit_threshold: float = 0.0015,
+        profit_threshold: float = 0.00015,
         sec_to_wait: float = 20,
         sec_after_trade: float = 0,
-        signal_threshold: float = 0.002,
+        signal_threshold: float = 0.0002,
         round_digits: int = 1,
         symbol=MARKET_ETH_USD,
     ):
@@ -133,7 +133,7 @@ class Trader:
                             if max_timestamp > min_timestamp:
                                 self.side = "BUY"
                                 self.opp_side = "SELL"
-                            elif max_timestamp < min_timestamp:
+                            else:
                                 self.side = "SELL"
                                 self.opp_side = "BUY"
 
@@ -143,6 +143,7 @@ class Trader:
 
                             await self.market_filled_or_canceled.wait()
                             if not self.is_market_filled:
+                                self._reset()
                                 continue
 
                             limit_price = self._get_limit_price(self.openeng_fill["price"])
@@ -179,6 +180,7 @@ class Trader:
                                         TradeLogger.info(
                                             f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit(closed_by_limit=True)}"
                                         )
+                                        self._reset()
                                         continue
 
                                 if self.is_trailing_opened:
@@ -187,6 +189,7 @@ class Trader:
                                         TradeLogger.info(
                                             f"cycle {self.cycle_counter} | trailing filled | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
                                         )
+                                        self._reset()
                                         continue
 
                                 TradeLogger.info(f"cycle {self.cycle_counter} | orders canceled, closing position | {self.opp_side}")
@@ -195,6 +198,24 @@ class Trader:
                                 TradeLogger.info(
                                     f"cycle {self.cycle_counter} | position closed | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
                                 )
+                                self._reset()
+    
+    def _reset(self):
+        self.sliding_window.clear()
+
+        self.market_filled_or_canceled.clear()
+        self.limit_filled_or_canceled.clear()
+        self.trailing_filled_or_canceled.clear()
+        self.mirror_filled.clear()
+        self.position_closed.clear()
+
+        self.is_market_filled = False
+        self.is_limit_filled = False
+        self.is_trailing_filled = False
+
+        self.is_limit_opened = False
+        self.is_trailing_opened = False
+
     
     def _send_market(self):
         self.dydx_connector.send_market_order(
