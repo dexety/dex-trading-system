@@ -39,10 +39,10 @@ class Trader:
         self,
         trailing_percent: float = 0.14,
         quantity: float = 0.01,
-        profit_threshold: float = 0.00015,
+        profit_threshold: float = 0.000015,
         sec_to_wait: float = 20,
         sec_after_trade: float = 0,
-        signal_threshold: float = 0.0002,
+        signal_threshold: float = 0.00002,
         round_digits: int = 1,
         symbol=MARKET_ETH_USD,
     ):
@@ -79,7 +79,7 @@ class Trader:
 
         self.dydx_connector = DydxConnector(
             symbols=[MARKET_ETH_USD],
-            network="mainnet",
+            network="ropsten",
         )
 
         self.loop = asyncio.get_event_loop()
@@ -128,10 +128,8 @@ class Trader:
                     if self.sliding_window.size() == 0:
                         continue
 
-                    print(*list(map(lambda x: x[0], reversed(self.sliding_window.tail.stack))), *list(map(lambda x: x[0], self.sliding_window.head.stack)))
                     (max_in_window, max_timestamp) = self.sliding_window.max()
                     (min_in_window, min_timestamp) = self.sliding_window.min()
-                    print(max_in_window / min_in_window)
 
                     if max_in_window / min_in_window >= 1 + self.signal_threshold:
                         TradeLogger.info("--------------------------------------------------------------")
