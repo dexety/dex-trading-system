@@ -104,7 +104,9 @@ class Trader:
         return str(1 if side == "SELL" else 10 ** 8)
 
     def _get_profit(self, closed_by_limit):
-        return (float(self.closing_fill["price"]) * (1 - self.maker_comission if closed_by_limit else self.taker_comission) - float(self.openeng_fill["price"]) * (1 - self.taker_comission)) * self.quantity * (-1 if self.side == "SELL" else 1)
+        closing_price_with_comission = float(self.closing_fill["price"]) * (1 - self.maker_comission if closed_by_limit else self.taker_comission)
+        opening_price_with_comission = float(self.openeng_fill["price"]) * (1 - self.taker_comission)
+        return (closing_price_with_comission - opening_price_with_comission) * self.quantity * (-1 if self.side == "SELL" else 1)
 
     async def _listen_binance(self):
         async with websockets.connect(
