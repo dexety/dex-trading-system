@@ -168,8 +168,8 @@ class Trader:
                     if self.sliding_window.size() == 0:
                         continue
 
-                    (max_in_window, max_timestamp) = self.sliding_window.max()
-                    (min_in_window, min_timestamp) = self.sliding_window.min()
+                    (max_in_window, max_timestamp) = self.sliding_window.get_max()
+                    (min_in_window, min_timestamp) = self.sliding_window.get_min()
 
                     if (
                         max_in_window / min_in_window

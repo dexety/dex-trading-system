@@ -42,14 +42,14 @@ class MMQueue:
                 self.tail.push(self.head.pop())
         return self.tail.pop()
 
-    def max(self):
+    def get_max(self):
         if len(self.tail.stack) == 0:
             return self.head.max_prefs[-1]
         if len(self.head.stack) == 0:
             return self.tail.max_prefs[-1]
         return max(self.head.max_prefs[-1], self.tail.max_prefs[-1])
 
-    def min(self):
+    def get_min(self):
         if len(self.tail.stack) == 0:
             return self.head.min_prefs[-1]
         if len(self.head.stack) == 0:
