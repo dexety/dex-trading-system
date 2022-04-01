@@ -3,10 +3,9 @@ import websockets
 import json
 import contextlib
 from datetime import datetime
-from sliding_window import SlidingWindow
-from my_queue import Queue
+from mmqueue import MMQueue
 from connectors.dydx.connector import DydxConnector
-from dydx3.constants import MARKET_BTC_USD, MARKET_ETH_USD, ORDER_SIDE_BUY
+from dydx3.constants import MARKET_ETH_USD
 from utils.logger.trader_logger import DebugLogger, TradeLogger
 
 
@@ -34,15 +33,28 @@ class Trader:
 
     symbol_binance = "btcusd_perp"
     socket_binance = f"wss://dstream.binance.com/ws/{symbol_binance}@trade"
+    network = "mainnet"
+    symbol = MARKET_ETH_USD
+
+    time_measurements = [
+        "from_last_trade_to_jump_detected",
+        "from_jump_detected_to_market_sending",
+        "from_market_sending_to_market_sent",
+        "from_market_sent_to_market_processed",
+        "from_market_processed_to_limit_sending",
+        "from_limit_sending_to_limit_sent",
+        "from_limit_sent_to_trailing_sending",
+        "from_trailing_sending_to_trailing_sent",
+    ]
 
     def __init__(
         self,
         trailing_percent: float = 0.14,
         quantity: float = 0.01,
-        profit_threshold: float = 0.000015,
+        profit_threshold: float = 0.0007,
         sec_to_wait: float = 20,
         sec_after_trade: float = 0,
-        signal_threshold: float = 0.00002,
+        signal_threshold: float = 0.0007,
         round_digits: int = 1,
         symbol=MARKET_ETH_USD,
     ):
@@ -59,7 +71,7 @@ class Trader:
 
         self.start_time = datetime.now()
         self.dispatch_time = datetime.now()
-        self.sliding_window = Queue()
+        self.sliding_window = MMQueue()
 
         self.market_filled_or_canceled = asyncio.Event()
         self.limit_filled_or_canceled = asyncio.Event()
@@ -78,9 +90,11 @@ class Trader:
         self.closing_fill = dict()
 
         self.dydx_connector = DydxConnector(
-            symbols=[MARKET_ETH_USD],
-            network="ropsten",
+            symbols=[self.symbol],
+            network=self.network,
         )
+        TradeLogger.info(f"Trader initiated. {self.network} {self.symbol}.")
+
 
         self.loop = asyncio.get_event_loop()
 
@@ -203,7 +217,8 @@ class Trader:
                             TradeLogger.info(
                                 f"cycle {self.cycle_counter} | position closed | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
                             )
-                            self._reset()
+
+                        self._reset()
 
     def _reset(self):
         self.market_filled_or_canceled.clear()
