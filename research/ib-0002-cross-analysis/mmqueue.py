@@ -28,7 +28,7 @@ class Stack:
         self.min_prefs.clear()
 
 
-class Queue:
+class MMQueue:
     def __init__(self) -> None:
         self.head = Stack()
         self.tail = Stack()
