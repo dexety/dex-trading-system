@@ -10,8 +10,9 @@ TradeLogger = logging.getLogger("Logger for trades")
 TradeLogger.setLevel(logging.INFO)
 DebugLogger.setLevel(logging.DEBUG)
 
-now = datetime.now().strftime('%Y_%m_%dT%H_%M_%S')
-TradesHandler = logging.FileHandler(f"logs/trades-{now}.log")
+TradesHandler = logging.FileHandler(
+    f"logs/trades-{datetime.now():%Y_%m_%dT%H_%M_%S}.log"
+)
 TradesHandler.setLevel(logging.INFO)
 TradesHandler.setFormatter(
     logging.Formatter(
@@ -19,7 +20,7 @@ TradesHandler.setFormatter(
     )
 )
 
-DebugHandler = logging.FileHandler(f"logs/trader_debug.log")
+DebugHandler = logging.FileHandler("logs/trader_debug.log")
 DebugHandler.setLevel(logging.DEBUG)
 DebugHandler.setFormatter(logging.Formatter(FORMAT))
 

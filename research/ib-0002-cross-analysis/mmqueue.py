@@ -21,7 +21,7 @@ class Stack:
         self.min_prefs.pop()
 
         return temp
-    
+
     def clear(self):
         self.stack.clear()
         self.max_prefs.clear()
@@ -63,7 +63,7 @@ class MMQueue:
 
     def size(self):
         return len(self.tail.stack) + len(self.head.stack)
-    
+
     def clear(self):
         self.head.clear()
         self.tail.clear()
