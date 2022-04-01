@@ -1,7 +1,4 @@
-import sys
 import os
-from datetime import datetime, timedelta
-from dydx3.helpers.request_helpers import generate_now_iso
 import websockets
 import json
 import asyncio
@@ -12,16 +9,11 @@ from dydx3 import Client
 from dydx3 import private_key_to_public_key_pair_hex
 from dydx3.constants import API_HOST_MAINNET, API_HOST_ROPSTEN
 from dydx3.constants import NETWORK_ID_MAINNET, NETWORK_ID_ROPSTEN
+from dydx3.helpers.request_helpers import generate_now_iso
 
-from dydx3.constants import MARKET_BTC_USD, MARKET_ETH_USD, ORDER_SIDE_BUY
-
-sys.path.append("../../")
-
-from connectors.dydx.connector import DydxConnector, safe_execute
-
-ETH_KEY = ""
-ETH_PRIVATE_KEY = ""
-# INFURA_NODE = os.getenv("INFURA_NODE")
+ETH_KEY = os.getenv("ETH_ADDRESS")
+ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
+INFURA_NODE = os.getenv("ROPSTEN_INFURA_NODE")
 
 
 client = Client(
@@ -29,11 +21,10 @@ client = Client(
     host=API_HOST_ROPSTEN,
     default_ethereum_address=ETH_KEY,
     eth_private_key=ETH_PRIVATE_KEY,
-    web3=Web3(Web3.HTTPProvider("http://localhost:8545")),
+    web3=Web3(Web3.HTTPProvider(INFURA_NODE)),
 )
 
 print(client.api_key_credentials["passphrase"])
-
 
 stark_private_key = client.onboarding.derive_stark_key()
 client.stark_private_key = stark_private_key
@@ -68,7 +59,7 @@ async def get_our_trades():
         while True:
             data = await sock.recv()
             json_data = json.loads(data)
-            print(json_data)
+            print(json.dumps(json_data, indent=4))
 
 
 loop = asyncio.get_event_loop()
