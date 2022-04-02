@@ -12,7 +12,7 @@ from utils.helpful_scripts import string_to_datetime
 class ProfitCalculator:
     dydx_comission = 0.0005
 
-    def __init__(self, signal_filename: str, predict_filename: str):
+    def __init__(self, signal_filename: str, predict_filename: str, mode: str = "", signals_dump: str = ""):
         self.signal_filename = signal_filename
         self.predict_filename = predict_filename
         self.signal_threshold = 0.0021
@@ -33,6 +33,10 @@ class ProfitCalculator:
         self.graph = go.Figure()
         self.signal_csv_line_handler = self._binance_csv_line_handler
         self.predict_csv_line_handler = self._dydx_csv_line_handler
+        self.mode = mode
+        self.signals_dump = ""
+        if mode == "sig_dump":
+            self.signals_dump = signals_dump
 
     @staticmethod
     def _dydx_csv_line_handler(line: list):
@@ -135,7 +139,7 @@ class ProfitCalculator:
         return predict_model(signal_stats)
 
     def _stupid_model(signal_stats: dict):
-        return 0.0014, 0.0015, 10000
+        return 0.0014, 0.0024, 30000
 
     def set_predict_csv_line_handler(self, handler: callable):
         self.predict_csv_line_handler = handler
@@ -157,9 +161,21 @@ class ProfitCalculator:
     def _opp_side(side: str):
         return "SELL" if side == "BUY" else "BUY"
 
+    def load_signals(self):
+        with open(self.signals_dump, "r", encoding="utf-8") as file:
+            csv_reader = csv.reader(file)
+            for line in tqdm(csv_reader, desc="load signals from file", total=len(self.signals)):
+                time = string_to_datetime(line[0])
+                direction = line[1]
+                self.signals.append({"time": time, "direction": direction})
+                self.signals_stats.append(None)  # TODO : collect stats
+
     def get_trades(self, predict_model: callable = _stupid_model):
         if len(self.signals) == 0:
-            self.get_signals()
+            if self.mode == "sig_dump":
+                self.load_signals()
+            else:
+                self.get_signals()
 
         with open(self.predict_filename, "r", encoding="utf-8") as predict_file:
             csv_reader = csv.reader(predict_file, delimiter=",")
