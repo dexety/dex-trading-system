@@ -3,7 +3,6 @@ import websockets
 import json
 import contextlib
 from datetime import datetime
-from mmqueue import MMQueue
 from sliding_window import SlidingWindow
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
@@ -148,18 +147,20 @@ class Trader:
                 price, time
         ):
             max_in_window = self.sliding_window.get_max()
-            max_timestamp = self.sliding_window.get_max_timestamp()
             min_in_window = self.sliding_window.get_min()
-            min_timestamp = self.sliding_window.get_min_timestamp()
             if max_in_window / min_in_window >= (
                     1 + self.signal_threshold
             ):
-                if max_timestamp > min_timestamp:
+                timestamp_of_max = self.sliding_window.get_timestamp_of_max()
+                timestamp_of_min = self.sliding_window.get_timestamp_of_min()
+                if timestamp_of_max > timestamp_of_min:
                     self.side = "BUY"
                     self.opp_side = "SELL"
-                elif max_timestamp < min_timestamp:
+                elif timestamp_of_max < timestamp_of_min:
                     self.side = "SELL"
                     self.opp_side = "BUY"
+                else:
+                    return False
                 return True
         return False
 
