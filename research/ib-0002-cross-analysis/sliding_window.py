@@ -14,12 +14,12 @@ class SlidingWindow:
         self.mins.clear()
         self.maxs.clear()
 
-    def get_min_timestamp(self) -> int:
+    def get_timestamp_of_min(self) -> int:
         if len(self.mins) == 0:
             return -1
         return self.mins[0][1]
 
-    def get_max_timestamp(self):
+    def get_timestamp_of_max(self):
         if len(self.maxs) == 0:
             return -1
         return self.maxs[0][1]
@@ -53,10 +53,10 @@ class SlidingWindow:
 
         while timestamp - self.get_first_trade() > self.window_size:
             first_trade = self.trades_timestamps.popleft()
-            if first_trade == self.get_min_timestamp():
+            if first_trade == self.get_timestamp_of_min():
                 self.mins.popleft()
                 changes = True
-            if first_trade == self.get_max_timestamp():
+            if first_trade == self.get_timestamp_of_max():
                 self.maxs.popleft()
                 changes = True
         self.trades_timestamps.append(timestamp)

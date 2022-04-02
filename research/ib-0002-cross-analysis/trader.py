@@ -3,7 +3,7 @@ import websockets
 import json
 import contextlib
 from datetime import datetime
-from mmqueue import MMQueue
+from sliding_window import SlidingWindow
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
 from utils.logger.trader_logger import DebugLogger, TradeLogger
@@ -33,7 +33,7 @@ class Trader:
 
     symbol_binance = "btcusd_perp"
     socket_binance = f"wss://dstream.binance.com/ws/{symbol_binance}@trade"
-    network = "mainnet"
+    network = "ropsten"
     symbol = MARKET_ETH_USD
 
     time_measurements = [
@@ -71,7 +71,7 @@ class Trader:
 
         self.start_time = datetime.now()
         self.dispatch_time = datetime.now()
-        self.sliding_window = MMQueue()
+        self.sliding_window = SlidingWindow()
 
         self.market_filled_or_canceled = asyncio.Event()
         self.limit_filled_or_canceled = asyncio.Event()
@@ -142,6 +142,28 @@ class Trader:
             - opening_comission
         )
 
+    def _update_window(self, price: float, time: int) -> bool:
+        if self.sliding_window.push_back(
+                price, time
+        ):
+            max_in_window = self.sliding_window.get_max()
+            min_in_window = self.sliding_window.get_min()
+            if max_in_window / min_in_window >= (
+                    1 + self.signal_threshold
+            ):
+                timestamp_of_max = self.sliding_window.get_timestamp_of_max()
+                timestamp_of_min = self.sliding_window.get_timestamp_of_min()
+                if timestamp_of_max > timestamp_of_min:
+                    self.side = "BUY"
+                    self.opp_side = "SELL"
+                elif timestamp_of_max < timestamp_of_min:
+                    self.side = "SELL"
+                    self.opp_side = "BUY"
+                else:
+                    return False
+                return True
+        return False
+
     async def _listen_binance(self):
         async with websockets.connect(
             self.socket_binance, ping_interval=None
@@ -157,23 +179,9 @@ class Trader:
                     and trade["T"] / 1000
                     > self.dispatch_time.second + self.sec_to_wait + 0.5
                 ):
-                    self.sliding_window.push((float(trade["p"]), trade["T"]))
-                    while (
-                        self.sliding_window.size() > 0
-                        and self.sliding_window.back()[1]
-                        < (datetime.now().timestamp() - 1) * 1000
-                    ):
-                        self.sliding_window.pop()
-
-                    if self.sliding_window.size() == 0:
-                        continue
-
-                    (max_in_window, max_timestamp) = self.sliding_window.get_max()
-                    (min_in_window, min_timestamp) = self.sliding_window.get_min()
 
                     if (
-                        max_in_window / min_in_window
-                        >= 1 + self.signal_threshold
+                        self._update_window(float(trade["p"]), int(trade["T"]))
                     ):
                         jump_detected = datetime.now()
                         last_binance_trade = datetime.fromtimestamp(
@@ -186,13 +194,6 @@ class Trader:
                             "--------------------------------------------------------------"
                         )
                         self.cycle_counter += 1
-
-                        if max_timestamp > min_timestamp:
-                            self.side = "BUY"
-                            self.opp_side = "SELL"
-                        else:
-                            self.side = "SELL"
-                            self.opp_side = "BUY"
 
                         self.dispatch_time = datetime.now()
                         market_sending = datetime.now()
@@ -305,6 +306,7 @@ class Trader:
         self.trailing_filled_or_canceled.clear()
         self.mirror_filled.clear()
         self.position_closed.clear()
+        self.sliding_window.clear()
 
         self.is_market_filled = False
         self.is_limit_filled = False
