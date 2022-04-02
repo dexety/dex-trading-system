@@ -1,8 +1,8 @@
 from sliding_window import SlidingWindow
 import plotly.graph_objs as go
 import csv
-import sys
 from datetime import datetime, timedelta
+import json
 from tqdm import tqdm
 from utils.helpful_scripts import string_to_datetime
 
@@ -81,7 +81,7 @@ class ProfitCalculator:
     def get_signals(self):
         with open(self.signal_filename, "r", encoding="utf-8") as signal_file:
             csv_reader = csv.reader(signal_file, delimiter=",")
-            for line in csv_reader:
+            for line in tqdm(csv_reader, desc="get signals"):
                 price, time, side = self.signal_csv_line_handler(line)
                 time += timedelta(milliseconds=self.latency_signal_us)
                 if side == self.signal_side:
@@ -95,6 +95,7 @@ class ProfitCalculator:
         return self.signals
 
     def show_signals(self):
+        self.graph.data = []
         if len(self.signals) == 0:
             self.get_signals()
 
@@ -134,7 +135,7 @@ class ProfitCalculator:
         return predict_model(signal_stats)
 
     def _stupid_model(signal_stats: dict):
-        return 0.0014, 0.0024, 20000
+        return 0.0014, 0.0015, 10000
 
     def set_predict_csv_line_handler(self, handler: callable):
         self.predict_csv_line_handler = handler
@@ -164,7 +165,7 @@ class ProfitCalculator:
             csv_reader = csv.reader(predict_file, delimiter=",")
             sig_num = 0
 
-            for line in csv_reader:
+            for line in tqdm(csv_reader, desc="get trades"):
                 price, time, side = self.predict_csv_line_handler(line)
                 if time <= self.signals[sig_num]["time"] + timedelta(milliseconds=self.latency_us_predict):
                     continue
@@ -225,7 +226,7 @@ class ProfitCalculator:
 
         with open(self.predict_filename, "r", encoding="utf-8") as predict_file:
             csv_reader = csv.reader(predict_file, delimiter=",")
-            for line in csv_reader:
+            for line in tqdm(csv_reader, desc="reading file to show trades"):
                 price, time, side = self.predict_csv_line_handler(line)
                 all_trades[side]["time"].append(time)
                 all_trades[side]["price"].append(price)
@@ -245,7 +246,7 @@ class ProfitCalculator:
         self.graph.update_layout(title_text=f"Signal trades | Amount of trades : {len(self.trades)} |"
                                             f" Total profit : {total_profit:.6f}")
 
-        for i in range(0, len(self.trades), 2):
+        for i in tqdm(range(0, len(self.trades), 2), desc="draw trades"):
             self.graph.add_vrect(
                 x0=self.trades[i]["time"],
                 x1=self.trades[i + 1]["time"],
@@ -273,7 +274,7 @@ class ProfitCalculator:
 
         profits = []
         usd = 100
-        for i in range(0, len(self.trades), 2):
+        for i in tqdm(range(0, len(self.trades), 2), desc="calculate profit"):
             new_usd = usd * (1 - self.dydx_comission) ** 2
             if self.trades[i]["side"] == "BUY":
                 jmp = self.trades[i + 1]["price"] / self.trades[i]["price"]
@@ -287,56 +288,33 @@ class ProfitCalculator:
 
         return total_profit, profits
 
+    def reset(self, new_signal_filename: str, new_predict_filename: str):
+        self.signal_filename = new_signal_filename
+        self.predict_filename = new_predict_filename
+        self.trades.clear()
+        self.signals.clear()
+        self.signals_stats.clear()
+        self.slide.clear()
+        self.graph.data = []
 
+    def dump_signals(self, filename: str):
+        if len(self.signals) == 0:
+            self.get_signals()
 
+        with open(filename, "w+", encoding="utf-8") as file:
+            csv_writer = csv.writer(file)
+            for signal in tqdm(self.signals, desc="dump signals", total=len(self.signals)):
+                csv_writer.writerow([signal["time"].strftime("%Y-%m-%dT%H:%M:%S.%fZ"), signal["direction"]])
 
+    def dump_trades(self, filename: str):
+        if len(self.trades) == 0:
+            self.get_trades()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        with open(filename, "w+", encoding="utf-8") as file:
+            csv_writer = csv.writer(file)
+            for trade in tqdm(self.trades, desc="dump trades", total=len(self.trades)):
+                csv_writer.writerow([trade["side"], trade["price"],
+                                     trade["time"].strftime("%Y-%m-%dT%H:%M:%S.%fZ"), trade["reason"]])
 
 
 
