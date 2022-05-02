@@ -2,15 +2,12 @@ from sliding_window import SlidingWindow
 import plotly.graph_objs as go
 import csv
 from datetime import datetime, timedelta
-import json
 from tqdm import tqdm
 from utils.helpful_scripts import string_to_datetime
 
-# TODO : add tqdm
-
 
 class ProfitCalculator:
-    dydx_comission = 0.0005
+    dydx_commission = 0.0005
 
     def __init__(self, signal_filename: str, predict_filename: str, mode: str = "", signals_dump: str = ""):
         self.signal_filename = signal_filename
@@ -18,25 +15,23 @@ class ProfitCalculator:
         self.signal_threshold = 0.0021
         self.window = 1000  # all time in millisecs
         self.signal_side = "BUY"
-        self.latency_us_predict = 500
-        self.latency_signal_us = 200
+        self.latency_us_predict = 0
+        self.latency_signal_us = 300
         self.after_signal = 20000
         self.loss_threshold = 0.0014
         self.profit_threshold = 0.0024
         self.after_last_trade = 3000
         self.pos_open = 20000
-        self.recover_time = 2000
+        self.recover_time = 3000
         self.trades = []
         self.signals = []
         self.signals_stats = []
-        self.slide = SlidingWindow()
+        self.slide = SlidingWindow(self.window)
         self.graph = go.Figure()
         self.signal_csv_line_handler = self._binance_csv_line_handler
         self.predict_csv_line_handler = self._dydx_csv_line_handler
         self.mode = mode
-        self.signals_dump = ""
-        if mode == "sig_dump":
-            self.signals_dump = signals_dump
+        self.signals_dump = signals_dump
 
     @staticmethod
     def _dydx_csv_line_handler(line: list):
@@ -139,7 +134,10 @@ class ProfitCalculator:
         return predict_model(signal_stats)
 
     def _stupid_model(signal_stats: dict):
-        return 0.0014, 0.0024, 30000
+        # a = random.choice([0.0008, 0.001, 0.0012])
+        # b = random.choice([0.0018, 0.002, 0.0022, 0.0024])
+        # c = random.choice([10000, 15000, 20000])
+        return 0.0014, 0.0024, 20000
 
     def set_predict_csv_line_handler(self, handler: callable):
         self.predict_csv_line_handler = handler
@@ -177,7 +175,7 @@ class ProfitCalculator:
             else:
                 self.get_signals()
 
-        with open(self.predict_filename, "r", encoding="utf-8") as predict_file:
+        with open(self.predict_filename, "r") as predict_file:
             csv_reader = csv.reader(predict_file, delimiter=",")
             sig_num = 0
 
@@ -291,7 +289,7 @@ class ProfitCalculator:
         profits = []
         usd = 100
         for i in tqdm(range(0, len(self.trades), 2), desc="calculate profit"):
-            new_usd = usd * (1 - self.dydx_comission) ** 2
+            new_usd = usd * (1 - self.dydx_commission) ** 2
             if self.trades[i]["side"] == "BUY":
                 jmp = self.trades[i + 1]["price"] / self.trades[i]["price"]
             else:
@@ -331,7 +329,3 @@ class ProfitCalculator:
             for trade in tqdm(self.trades, desc="dump trades", total=len(self.trades)):
                 csv_writer.writerow([trade["side"], trade["price"],
                                      trade["time"].strftime("%Y-%m-%dT%H:%M:%S.%fZ"), trade["reason"]])
-
-
-
-
