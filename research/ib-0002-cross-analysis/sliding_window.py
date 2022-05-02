@@ -3,11 +3,11 @@ from datetime import datetime
 
 
 class SlidingWindow:
-    def __init__(self):
+    def __init__(self, window_millisec: int = 1000):
         self.trades_timestamps = deque()
         self.mins = deque()
         self.maxs = deque()
-        self.window_size = 1000
+        self.window_size = window_millisec
 
     def clear(self):
         self.trades_timestamps.clear()

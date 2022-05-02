@@ -7,9 +7,9 @@ def get_datetime(string_time: str) -> datetime:
     return datetime.strptime(string_time, "%Y-%m-%dT%H:%M:%S.%fZ")
 
 
-filename = "ETH-USD_dydx_2022-01-01_2022-02-01.csv"
-begin = get_datetime("2022-01-01T00:00:00.000Z")
-end = get_datetime("2022-01-19T17:31:24.152Z")
+filename = "ETH-USD_dydx_2022-03-28_reverse.csv"
+begin = get_datetime("2022-03-28T00:00:00.000Z")
+end = get_datetime("2022-03-28T23:59:59.000Z")
 day = end.day
 trade_template = {"side": "", "size": "", "price": "", "createdAt": ""}
 
@@ -26,6 +26,3 @@ with open(filename, "a") as file:
         end = get_datetime(trades[-1]["createdAt"])
         for trade in trades:
             csv_writer.writerow(trade)
-        if end.day != day:
-            print(f"Done with {day} jan")
-            day = end.day
