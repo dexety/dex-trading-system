@@ -2,6 +2,7 @@ from collections import deque
 from dataclasses import dataclass
 import typing
 
+
 @dataclass
 class SlidingWindowElem:
     price: float
@@ -49,11 +50,14 @@ class SlidingWindow:
         if len(self.trades_timestamps) == 0:
             return 2239499954238
         return self.trades_timestamps[0]
-    
+
     def move_window(self, new_timestamp: int) -> bool:
         """Return value: True if min or max is changed"""
         minmax_was_changed: bool = False
-        while new_timestamp - self.get_first_trade_timestamp() > self.window_size_millisec:
+        while (
+            new_timestamp - self.get_first_trade_timestamp()
+            > self.window_size_millisec
+        ):
             first_trade = self.trades_timestamps.popleft()
             if first_trade == self.get_timestamp_of_min():
                 self.mins.popleft()
@@ -63,9 +67,7 @@ class SlidingWindow:
                 minmax_was_changed = True
         return minmax_was_changed
 
-    def push_back(
-        self, price: float, timestamp: int
-    ) -> bool:
+    def push_back(self, price: float, timestamp: int) -> bool:
         """Return value: True if min or max is changed"""
         minmax_was_changed: bool = False
         if timestamp < self.get_last_trade_timestamp():

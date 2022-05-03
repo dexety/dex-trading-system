@@ -88,7 +88,8 @@ class Trader:
             min_window_timestamp = self.sliding_window.get_timestamp_of_min()
             max_window_price = self.sliding_window.get_max_value()
             max_window_timestamp = self.sliding_window.get_timestamp_of_max()
-            LOGGER.debug(f"Binance trade listener is still alive.\n"
+            LOGGER.debug(
+                f"Binance trade listener is still alive.\n"
                 f"Current state:\n"
                 f"Min price in window = {min_window_price}\n"
                 f"Max price in window = {max_window_price}\n"
@@ -101,13 +102,20 @@ class Trader:
             and update["side"] == "BUY"
         ):
             if self.sliding_window.push_back(
-                float(update["price"]), datetime.fromisoformat(update["createdAt"]).timestamp()
+                float(update["price"]),
+                datetime.fromisoformat(update["createdAt"]).timestamp(),
             ):
                 min_window_price = self.sliding_window.get_min_value()
-                min_window_timestamp = self.sliding_window.get_timestamp_of_min()
+                min_window_timestamp = (
+                    self.sliding_window.get_timestamp_of_min()
+                )
                 max_window_price = self.sliding_window.get_max_value()
-                max_window_timestamp = self.sliding_window.get_timestamp_of_max()
-                if max_window_price / min_window_price >= (1 + self.signal_threshold):
+                max_window_timestamp = (
+                    self.sliding_window.get_timestamp_of_max()
+                )
+                if max_window_price / min_window_price >= (
+                    1 + self.signal_threshold
+                ):
                     if max_window_timestamp > min_window_timestamp:
                         self.side = "BUY"
                         self.opp_side = "SELL"
@@ -150,7 +158,7 @@ class Trader:
                     self.dispatch_time + timedelta(seconds=20)
                 ):
                     LOGGER.info("Cancel all orders on dydx. Reason: timeout")
-                    self.dydx_connector.cancel_all_orders(market=self.market)
+                    self.dydx_connector.cancel_all_orders(symbol=self.market)
                     LOGGER.info(
                         f"Market {self.opp_side} on dydx."
                         f"Price {self.get_price(opposite=False)}, "
@@ -209,7 +217,7 @@ class Trader:
                     and update["contents"]["fills"]
                 ):
                     LOGGER.info("Cancel all orders on dydx. Reason: filled")
-                    self.dydx_connector.cancel_all_orders(market=self.market)
+                    self.dydx_connector.cancel_all_orders(symbol=self.market)
                     self.is_limit_sent = False
                     self.is_market_sent = False
 
