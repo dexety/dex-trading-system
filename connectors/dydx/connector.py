@@ -82,7 +82,7 @@ class DydxConnector:
     def __init__(
         self,
         symbols: list = [],
-        network: str = "ropsten",
+        network: str = "mainnet",
     ) -> None:
         self.address = os.getenv("ETH_ADDRESS")
         self.private_key = os.getenv("ETH_PRIVATE_KEY")

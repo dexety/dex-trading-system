@@ -4,7 +4,7 @@ import json
 from catboost import CatBoostClassifier, Pool, metrics
 from sklearn.metrics import accuracy_score
 import random
-from utils.logger.logger import Logger
+from utils.logger import LOGGER
 
 
 class TrainModel:
@@ -19,9 +19,9 @@ class TrainModel:
         self.split_data_to_train_validation_test()
 
     def read_data(self) -> None:
-        Logger.debug("Reading data")
+        LOGGER.debug("Reading data")
         self.df = pd.read_csv(self.data_path)
-        Logger.debug("Prepare data")
+        LOGGER.debug("Prepare data")
         self.x_columns = list(
             filter(lambda column: not "punch" in column, self.df.columns)
         )
@@ -50,7 +50,7 @@ class TrainModel:
         self.y = self.df["target"]
 
     def split_data_to_train_validation_test(self) -> None:
-        Logger.debug("Split data to train, validation and test")
+        LOGGER.debug("Split data to train, validation and test")
         buckets = [
             self.df[
                 len(self.df)
@@ -85,7 +85,7 @@ class TrainModel:
         self.y_test = df_test["target"]
 
     def train(self) -> None:
-        Logger.debug("Start model training")
+        LOGGER.debug("Start model training")
         params = {
             "iterations": 1500,
             "l2_leaf_reg": 2,
@@ -109,7 +109,7 @@ class TrainModel:
         self.model.save_model("punch_predictor_model.dump")
         self.predictions_probs = self.model.predict_proba(self.X_test)
 
-        Logger.debug(
+        LOGGER.debug(
             "Model validation accuracy: {:.4}".format(
                 accuracy_score(self.y_test, self.model.predict(self.X_test))
             )
@@ -210,7 +210,7 @@ class TrainModel:
         )
 
     def find_predict_thresholds(self):
-        Logger.debug("Find predic threshold")
+        LOGGER.debug("Find predic threshold")
         qualities = []
         for null_threshold in np.arange(0.3, 0.8, 0.05):
             for prob_threshold in np.arange(0.3, 0.7, 0.05):
