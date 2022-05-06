@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import math
 import os
 import random
@@ -7,7 +8,6 @@ from datetime import datetime
 from datetime import timedelta
 
 from binance.enums import FuturesType
-from dydx3.constants import MARKET_BTC_USD
 
 from connectors.dydx.connector import DydxConnector
 from connectors.binance.connector import BinanceConnector
@@ -33,6 +33,18 @@ def handle_task_result(task: asyncio.Task) -> None:
         raise error
 
 
+@dataclasses.dataclass
+class Settings:
+    trailing_percent: float
+    quantity: float
+    profit_threshold: float
+    sec_to_wait: float
+    sec_after_trade: float
+    signal_threshold: float
+    dydx_market: str
+    binance_market: str
+
+
 class Trader:
     side: str = ""
     opp_side: str = ""
@@ -40,41 +52,26 @@ class Trader:
     sliding_window: SlidingWindow = SlidingWindow()
     is_market_sent: bool = False
     is_limit_sent: bool = False
-    dydx_connector = DydxConnector(
-        [MARKET_BTC_USD],
-    )
-    binance_connector = BinanceConnector(
-        os.getenv("BINANCE_API_KEY"),
-        os.getenv("BINANCE_API_SECRET"),
-        ["BTCUSD_PERP"],
-        FuturesType.COIN_M,
-    )
     loop = asyncio.get_event_loop()
 
     # pylint: disable=too-many-arguments
-    def __init__(
-        self,
-        trailing_percent: float = 0.005,
-        quantity: float = 0.001,
-        profit_threshold: float = 0.0015,
-        sec_to_wait: float = 30,
-        sec_after_trade: float = 0,
-        signal_threshold: float = 0.003,
-        market=MARKET_BTC_USD,
-    ):
-        self.trailing_percent = trailing_percent
-        self.quantity = quantity
-        self.profit_threshold = profit_threshold
-        self.market = market
-        self.sec_to_wait = sec_to_wait
-        self.sec_after_trade = sec_after_trade
-        self.signal_threshold = signal_threshold
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.dydx_connector = DydxConnector(
+            [settings.dydx_market],
+        )
+        self.binance_connector = BinanceConnector(
+            os.getenv("BINANCE_API_KEY"),
+            os.getenv("BINANCE_API_SECRET"),
+            [settings.binance_market],
+            FuturesType.COIN_M,
+        )
 
     def get_trailing_percent(self):
         return (
-            self.trailing_percent
+            self.settings.trailing_percent
             if self.opp_side == "BUY"
-            else 0 - self.trailing_percent
+            else 0 - self.settings.trailing_percent
         )
 
     def get_price(self, opposite: bool):
@@ -114,7 +111,7 @@ class Trader:
                     self.sliding_window.get_timestamp_of_max()
                 )
                 if max_window_price / min_window_price >= (
-                    1 + self.signal_threshold
+                    1 + self.settings.signal_threshold
                 ):
                     if max_window_timestamp > min_window_timestamp:
                         self.side = "BUY"
@@ -134,17 +131,17 @@ class Trader:
                     LOGGER.info(
                         f"Market {self.side} on dydx."
                         f"Price {self.get_price(opposite=False)}, "
-                        f"quantity{self.quantity}. "
+                        f"quantity{self.settings.quantity}. "
                         f"Reason: binance signal"
                     )
                     self.dydx_connector.send_market_order(
-                        symbol=self.market,
+                        symbol=self.settings.dydx_market,
                         side=self.side,
                         price=self.get_price(opposite=False),
-                        quantity=self.quantity,
+                        quantity=self.settings.quantity,
                     )
                     self.is_market_sent = True
-                    asyncio.sleep(self.sec_to_wait)
+                    asyncio.sleep(self.settings.sec_to_wait)
                     self.sliding_window.clear()
 
     async def _listen_binance(self):
@@ -158,18 +155,20 @@ class Trader:
                     self.dispatch_time + timedelta(seconds=20)
                 ):
                     LOGGER.info("Cancel all orders on dydx. Reason: timeout")
-                    self.dydx_connector.cancel_all_orders(symbol=self.market)
+                    self.dydx_connector.cancel_all_orders(
+                        symbol=self.settings.dydx_market
+                    )
                     LOGGER.info(
                         f"Market {self.opp_side} on dydx."
                         f"Price {self.get_price(opposite=False)}, "
-                        f"quantity{self.quantity}. "
+                        f"quantity{self.settings.quantity}. "
                         f"Reason: close positions"
                     )
                     self.dydx_connector.send_market_order(
-                        symbol=self.market,
+                        symbol=self.settings.dydx_market,
                         side=self.opp_side,
                         price=self.get_price(opposite=True),
-                        quantity=self.quantity,
+                        quantity=self.settings.quantity,
                     )
                     self.is_market_sent = False
                     self.is_limit_sent = False
@@ -186,30 +185,30 @@ class Trader:
                     LOGGER.info(
                         f"Trailing {self.opp_side} on dydx."
                         f"Price {self.get_price(opposite=True)}, "
-                        f"quantity{self.quantity}. "
+                        f"quantity{self.settings.quantity}. "
                         f"Reason: fills"
                     )
                     self.dydx_connector.send_trailing_stop_order(
-                        symbol=self.market,
+                        symbol=self.settings.dydx_market,
                         side=self.opp_side,
                         price=self.get_price(opposite=True),
-                        quantity=self.quantity,
+                        quantity=self.settings.quantity,
                         trailing_percent=self.get_trailing_percent(),
                     )
                     price = float(update["contents"]["fills"][0]["price"]) * (
-                        1 + self.profit_threshold
+                        1 + self.settings.profit_threshold
                     )
                     LOGGER.info(
                         f"Limit {self.opp_side} on dydx."
                         f"Price {math.ceil(price * 10) / 10}, "
-                        f"quantity{self.quantity}. "
+                        f"quantity{self.settings.quantity}. "
                         f"Reason: fills"
                     )
                     self.dydx_connector.send_limit_order(
-                        symbol=self.market,
+                        symbol=self.settings.dydx_market,
                         side=self.opp_side,
                         price=math.ceil(price * 10) / 10,
-                        quantity=self.quantity,
+                        quantity=self.settings.quantity,
                     )
             else:
                 if (
@@ -217,7 +216,9 @@ class Trader:
                     and update["contents"]["fills"]
                 ):
                     LOGGER.info("Cancel all orders on dydx. Reason: filled")
-                    self.dydx_connector.cancel_all_orders(symbol=self.market)
+                    self.dydx_connector.cancel_all_orders(
+                        symbol=self.settings.dydx_market
+                    )
                     self.is_limit_sent = False
                     self.is_market_sent = False
 

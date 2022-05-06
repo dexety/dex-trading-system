@@ -1,9 +1,9 @@
 from collections import deque
-from dataclasses import dataclass
+import dataclasses
 import typing
 
 
-@dataclass
+@dataclasses.dataclass
 class SlidingWindowElem:
     price: float
     timestamp: int
