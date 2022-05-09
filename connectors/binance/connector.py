@@ -43,6 +43,7 @@ class BinanceConnector:
 
         self.sync_client = Client(self.api_key, self.api_secret)
 
+        # TODO: fix cache error in code below. Problems with import
         # for symbol in self.symbols:
         #     self.get_cached_order_book(symbol)
 
