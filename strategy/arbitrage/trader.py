@@ -9,7 +9,7 @@ from datetime import timedelta
 
 from binance.enums import FuturesType
 
-from connectors.dydx.connector import DydxConnector
+from connectors.dydx.connector import DydxConnector, Network
 from connectors.binance.connector import BinanceConnector
 from utils.logger import LOGGER
 from utils.sliding_window import SlidingWindow
@@ -59,6 +59,7 @@ class Trader:
         self.settings = settings
         self.dydx_connector = DydxConnector(
             [settings.dydx_market],
+            Network.mainnet,
         )
         self.binance_connector = BinanceConnector(
             os.getenv("BINANCE_API_KEY"),

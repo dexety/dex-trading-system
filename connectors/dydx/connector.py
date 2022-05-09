@@ -51,27 +51,27 @@ def safe_execute(f: Callable):
 
 
 @dataclass
-class Network:
+class NetworkSettings:
     endpoint: str
     network_id: int
     api_host: str
     ws_host: str
 
 
-networks = {
-    "ropsten": Network(
+@dataclass
+class Network:
+    ropsten: NetworkSettings = NetworkSettings(
         os.getenv("ROPSTEN_INFURA_NODE"),
         NETWORK_ID_ROPSTEN,
         API_HOST_ROPSTEN,
         WS_HOST_ROPSTEN,
-    ),
-    "mainnet": Network(
+    )
+    mainnet: NetworkSettings = NetworkSettings(
         os.getenv("INFURA_NODE"),
         NETWORK_ID_MAINNET,
         API_HOST_MAINNET,
         WS_HOST_MAINNET,
-    ),
-}
+    )
 
 
 class DydxConnector:
@@ -82,11 +82,11 @@ class DydxConnector:
     def __init__(
         self,
         symbols: list = [],
-        network: str = "mainnet",
+        network: NetworkSettings = Network.ropsten,
     ) -> None:
         self.address = os.getenv("ETH_ADDRESS")
         self.private_key = os.getenv("ETH_PRIVATE_KEY")
-        self.network = networks[network]
+        self.network = network
         self.sync_client = Client(
             network_id=self.network.network_id,
             host=self.network.api_host,

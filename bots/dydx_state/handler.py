@@ -3,12 +3,12 @@ import json
 import asyncio
 from telebot import TeleBot
 from telebot.types import Message
-from connectors.dydx.connector import DydxConnector
+from connectors.dydx.connector import DydxConnector, Network
 
 TOKEN = os.getenv("LLV_DYDX")
 bot = TeleBot(TOKEN, parse_mode=None)
 
-dydx_connector = DydxConnector()
+dydx_connector = DydxConnector([], Network.mainnet)
 
 
 class CommandsQueue:
