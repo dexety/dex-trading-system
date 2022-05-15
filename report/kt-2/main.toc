@@ -1,0 +1,21 @@
+\babel@toc {russian}{}
+\contentsline {section}{\numberline {1}Введение}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Актуальность проблемы}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Цели и задачи}{2}{subsection.1.2}%
+\contentsline {subsubsection}{\numberline {1.2.1}Цель}{2}{subsubsection.1.2.1}%
+\contentsline {subsubsection}{\numberline {1.2.2}Задачи}{2}{subsubsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.3}Статьи}{2}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Документация бирж}{3}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}Документация библиотек}{3}{subsection.1.5}%
+\contentsline {subsection}{\numberline {1.6}Аналоги}{3}{subsection.1.6}%
+\contentsline {section}{\numberline {2}Реферат}{3}{section.2}%
+\contentsline {section}{\numberline {3}Введение}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Актуальность проблемы}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Цели и задачи}{5}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Цель}{5}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Задачи}{5}{subsubsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.3}Статьи}{5}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Документация бирж}{6}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Документация библиотек}{6}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}Аналоги}{6}{subsection.3.6}%
+\contentsline {section}{\numberline {4}Реферат}{6}{section.4}%
