@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import datetime
-from connectors.dydx.connector import DydxConnector
+from connectors.dydx.connector import DydxConnector, Network
 from dydx3.constants import MARKET_ETH_USD
 from utils.helpful_scripts import string_to_datetime
 
@@ -10,6 +10,7 @@ def get_trades_from_dydx_api(
 ) -> pd.DataFrame:
     dydx_connector_trades = DydxConnector(
         [symbol],
+        Network.mainnet,
     )
 
     return pd.DataFrame(

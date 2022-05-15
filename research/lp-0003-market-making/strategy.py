@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from dydx3.errors import DydxApiError
 from connectors.dydx.connector import DydxConnector, safe_execute
 from connectors.dydx.order_book_cache import OrderBookCache
-from utils.logger.logger import Logger
+from utils.logger import LOGGER
 
 
 def too_many_requests_guard(function):
@@ -17,7 +17,7 @@ def too_many_requests_guard(function):
                 return function(*args, **kwargs)
             except DydxApiError as dydx_error:
                 if dydx_error.status_code == 429:
-                    Logger.debug(f"Too many requests error: {dydx_error}")
+                    LOGGER.debug(f"Too many requests error: {dydx_error}")
                     time.sleep(1)
                     continue
                 raise dydx_error
@@ -113,7 +113,7 @@ class MarketMakingStrategy:
         ):
             return
 
-        Logger.debug("Orders update")
+        LOGGER.debug("Orders update")
 
         self.trade_update_mutex.acquire()
         start_time = time.time()
@@ -128,14 +128,14 @@ class MarketMakingStrategy:
             self.process_second_punch()
             self.is_running = True
 
-        Logger.debug(
+        LOGGER.debug(
             f"Spent time processing update {1000 * (time.time() - start_time)} ms"
         )
         self.trade_update_mutex.release()
 
     @safe_execute
     def cancel_all_orders(self) -> None:
-        Logger.debug("Cancel all orders")
+        LOGGER.debug("Cancel all orders")
         self.dydx_connector_trades.cancel_all_orders()
 
     def wait_for_orders_set(self) -> None:
@@ -187,14 +187,14 @@ class MarketMakingStrategy:
         )
 
     def cancel_order(self, side: str) -> None:
-        Logger.debug(f"Cancel {side}")
+        LOGGER.debug(f"Cancel {side}")
         if self.open_orders[side] is not None:
             try:
                 cancel_order = self.dydx_connector_trades.cancel_order(
                     self.open_orders[side]["id"]
                 )
             except DydxApiError as error:
-                Logger.debug(f"Cancel error: {error}")
+                LOGGER.debug(f"Cancel error: {error}")
 
     def threading_replace_mirror_orders(self) -> None:
         if self.open_orders["BUY"]:
@@ -233,7 +233,7 @@ class MarketMakingStrategy:
         thread_send_order_sell.join()
 
     def set_order_for_second_punch(self) -> None:
-        Logger.debug("Set orders for second punch")
+        LOGGER.debug("Set orders for second punch")
         positions = self.get_open_positions_by_dydx_api()
         total_size = sum(
             map(lambda position: float(position["size"]), positions)
@@ -241,7 +241,7 @@ class MarketMakingStrategy:
         average_price = sum(
             map(lambda position: float(position["entryPrice"]), positions)
         ) / len(positions)
-        Logger.debug(
+        LOGGER.debug(
             f"Size of opened positions: {total_size}, average price: {average_price}"
         )
         self.set_null_open_orders()
@@ -276,7 +276,7 @@ class MarketMakingStrategy:
         return self.dydx_connector_trades.get_our_positions()["positions"]
 
     def process_second_punch(self) -> None:
-        Logger.debug("Waiting for second punch")
+        LOGGER.debug("Waiting for second punch")
         iters_num = 10
         for _ in range(iters_num):
             self.wait_for_second_punch(iters_num)
@@ -294,7 +294,7 @@ class MarketMakingStrategy:
                 self.cancel_order(side)
             except DydxApiError:
                 break
-            Logger.debug("Re-order")
+            LOGGER.debug("Re-order")
             if side == "BUY":
                 self.send_limit_order(
                     side=side,
@@ -353,7 +353,7 @@ class MarketMakingStrategy:
             size = self.buying_power
 
         if self.need_to_update_our_orders():
-            Logger.debug(
+            LOGGER.debug(
                 f"Send limit {side}, {self.get_new_price(side, spread)}$"
             )
             self.open_orders[
@@ -375,9 +375,9 @@ class MarketMakingStrategy:
             target=self.dydx_connector_order_book.start
         )
         self.order_book_update_thread.start()
-        Logger.debug("STRATEGY PREPARATION")
+        LOGGER.debug("STRATEGY PREPARATION")
         while len(self.order_book.asks) == 0 or len(self.order_book.bids) == 0:
-            Logger.debug(
+            LOGGER.debug(
                 "Waiting for order book update to understand the spread window"
             )
             time.sleep(2)
@@ -389,8 +389,8 @@ class MarketMakingStrategy:
         self.orders_checker_thread.start()
         time.sleep(5)  # needs to skip the first archive trades
         self.is_running = True
-        Logger.debug("STRATEGY LAUNCH")
-        Logger.debug("Waiting for trades")
+        LOGGER.debug("STRATEGY LAUNCH")
+        LOGGER.debug("Waiting for trades")
 
 
 def main() -> None:

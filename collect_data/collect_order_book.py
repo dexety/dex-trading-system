@@ -2,7 +2,7 @@ import os
 import json
 import argparse
 from datetime import datetime
-from connectors.dydx.connector import DydxConnector
+from connectors.dydx.connector import DydxConnector, Network
 
 ETH_ADDRESS = os.getenv("ETH_ADDRESS")
 ETH_PRIVATE_KEY = os.getenv("ETH_PRIVATE_KEY")
@@ -30,7 +30,7 @@ def on_order_book_update(update):
 
 
 def main():
-    dydx_connector = DydxConnector(symbols)
+    dydx_connector = DydxConnector(symbols, Network.mainnet)
     dydx_connector.add_orderbook_listener(on_order_book_update)
     dydx_connector.start()
 

@@ -1,12 +1,16 @@
 import asyncio
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from binance import AsyncClient, Client, BinanceSocketManager
-from binance.enums import TIME_IN_FORCE_GTC, TIME_IN_FORCE_IOC, ORDER_TYPE_LIMIT
+from binance.enums import TIME_IN_FORCE_GTC
+from binance.enums import TIME_IN_FORCE_IOC
+from binance.enums import ORDER_TYPE_LIMIT
+from binance.enums import FuturesType
 
-from depth_cache import DepthCache
-from utils.logger.logger import Logger
+from utils.logger import LOGGER
+
+from connectors.binance.depth_cache import DepthCache
 
 
 def dt_to_ms_timestamp(date_time: datetime):
@@ -29,17 +33,21 @@ class BinanceConnector:
     execution_report_listeners = []
     finish_listeners = []
 
-    def __init__(self, api_key, api_secret, symbols):
+    def __init__(
+        self, api_key, api_secret, symbols, future_type=FuturesType.USD_M
+    ):
         self.api_key = api_key
         self.api_secret = api_secret
         self.symbols = symbols
+        self.future_type = future_type
 
         self.sync_client = Client(self.api_key, self.api_secret)
 
-        for symbol in self.symbols:
-            self.get_cached_order_book(symbol)
+        # TODO: fix cache error in code below. Problems with import
+        # for symbol in self.symbols:
+        #     self.get_cached_order_book(symbol)
 
-        Logger.info("binance connector has been inited")
+        LOGGER.info("binance connector has been inited")
 
     @staticmethod
     def get_commission():
@@ -47,17 +55,17 @@ class BinanceConnector:
 
     def add_order_book_listener(self, listener):
         if self.started:
-            Logger.error("cannot add listener after start")
+            LOGGER.error("cannot add listener after start")
             return
         self.order_book_listeners.append(listener)
-        Logger.info("added order_book listener")
+        LOGGER.info("added order_book listener")
 
     def add_trade_listener(self, listener):
         if self.started:
-            Logger.error("cannot add listener after start")
+            LOGGER.error("cannot add listener after start")
             return
         self.trade_listeners.append(listener)
-        Logger.info("added trade listener")
+        LOGGER.info("added trade listener")
 
     def get_cached_symbol_info(self, symbol):
         if symbol not in self.symbol_infos:
@@ -101,7 +109,7 @@ class BinanceConnector:
         return balances
 
     def send_limit_order(self, *, symbol, side, price, quantity, our_id):
-        Logger.debug(
+        LOGGER.debug(
             f"""send limit order:
                 symbol: {symbol}
                 side: {side}
@@ -120,7 +128,7 @@ class BinanceConnector:
         )
 
     def send_ioc_order(self, *, symbol, side, price, quantity, our_id):
-        Logger.debug(
+        LOGGER.debug(
             f"""send ioc order:
                 symbol: {symbol}
                 side: {side}
@@ -139,7 +147,7 @@ class BinanceConnector:
         )
 
     def cancel_order(self, symbol, our_id):
-        Logger.debug(f"canceled order: symbol: {symbol} our_id: {str(our_id)}")
+        LOGGER.debug(f"canceled order: symbol: {symbol} our_id: {str(our_id)}")
         self.sync_client.cancel_order(
             symbol=symbol, origClientOrderId=str(our_id)
         )
@@ -177,7 +185,7 @@ class BinanceConnector:
         current_start_timestamp = dt_to_ms_timestamp(start_dt) + time_bias
         end_timestamp = dt_to_ms_timestamp(end_dt) + time_bias
         while current_start_timestamp < end_timestamp:
-            Logger.debug(
+            LOGGER.debug(
                 f"""binance::get_historical_aggregated_trades
                     start timestamp: {str(current_start_timestamp)}
                     end timestamp: {str(end_timestamp)}"""
@@ -206,14 +214,14 @@ class BinanceConnector:
             trade["time"] -= time_bias
         return trades
 
-    async def start(self, run_duration):
+    async def start(self, run_duration=timedelta(days=1)):
         if self.started:
-            Logger.error("connector already started")
+            LOGGER.error("connector already started")
             return
         self.started = True
         self.run_duration = run_duration
         await self._async_start()
-        Logger.info("binance connector has been started")
+        LOGGER.info("binance connector has been started")
 
     def _call_order_book_listeners(self, depth_update):
         # self.depth_caches[depth_update['symbol']].apply_orders(depth_update)
@@ -233,15 +241,14 @@ class BinanceConnector:
         self.exchange_data_task = asyncio.create_task(
             self._subscribe_exchange_data()
         )
-
         if self.exchange_data_task:
             await self.exchange_data_task
         if self.user_data_task:
             await self.user_data_task
 
     async def _subscribe_exchange_data(self):
-        client = await AsyncClient.create()
-        binance_manager = BinanceSocketManager(client)
+        async_client = await AsyncClient.create()
+        binance_manager = BinanceSocketManager(async_client)
 
         streams = []
 
@@ -254,9 +261,11 @@ class BinanceConnector:
                 ]
             )
 
-        Logger.info(f"subscribe for exchange data streams: {str(streams)}")
+        LOGGER.info(f"subscribe for exchange data streams: {str(streams)}")
 
-        multiplex_socket = binance_manager.futures_multiplex_socket(streams)
+        multiplex_socket = binance_manager.futures_multiplex_socket(
+            streams, self.future_type
+        )
 
         stop_time = datetime.utcnow() + self.run_duration
         async with multiplex_socket as msm_socket:
@@ -271,19 +280,19 @@ class BinanceConnector:
                         trade["price"] = float(update["data"]["p"])
                         trade["createdAt"] = (
                             datetime.fromtimestamp(update["data"]["E"] / 1000)
-                        ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                        ).strftime("%Y-%m-%dT%H:%M:%S.%f")
                         trade["exchange"] = "binance"
                         trade["symbol"] = update["data"]["s"]
                         trade["recieveTime"] = (datetime.utcnow()).strftime(
-                            "%Y-%m-%dT%H:%M:%S.%fZ"
+                            "%Y-%m-%dT%H:%M:%S.%f"
                         )
                         self._call_trade_listeners(trade)
                     elif stream.endswith("depth"):
                         self._call_order_book_listeners(update["data"])
                     else:
-                        Logger.error(f"unknown message: {update}")
+                        LOGGER.error(f"unknown message: {update}")
                 except Exception as error:
-                    Logger.error(
+                    LOGGER.error(
                         f"exchange data exception: {str(error)} traceback: {traceback.format_exc()}"
                     )
 

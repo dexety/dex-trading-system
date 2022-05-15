@@ -2,7 +2,7 @@ from asyncio.runners import run
 import json
 import asyncio
 from connectors.dydx.connector import DydxConnector
-from utils.logger.logger import Logger
+from utils.logger import LOGGER
 from my_queue import Queue
 from connectors.binance.connector import BinanceConnector
 from datetime import datetime
@@ -44,7 +44,7 @@ class FindLeaps:
         self.dydx_buy_leaps = []
         self.dydx_sell_leaps = []
 
-        Logger.info(
+        LOGGER.info(
             f"inited template strategy. balances: {binance_connector.get_all_balances()}"
         )
 
@@ -60,7 +60,7 @@ class FindLeaps:
         asyncio.run(self._async_start(run_duration))
 
     def on_order_book(self, order_book):
-        Logger.info(
+        LOGGER.info(
             f"{order_book.symbol} :: received order_book: bids: {order_book.get_bids()} asks: {order_book.get_asks()}"
         )
 
@@ -82,7 +82,7 @@ class FindLeaps:
         #         queue.pop()
 
     def on_binance_trade(self, trade):
-        # Logger.info(f"{trade['symbol']} :: received binance trade: {trade}")
+        # LOGGER.info(f"{trade['symbol']} :: received binance trade: {trade}")
 
         if trade["side"] == "BUY":
             self.process_trade(
@@ -100,7 +100,7 @@ class FindLeaps:
             )
 
     def on_dydx_trade(self, trade):
-        # Logger.info(f"{trade['symbol']} :: received dydx trade: {trade}")
+        # LOGGER.info(f"{trade['symbol']} :: received dydx trade: {trade}")
 
         if trade["side"] == "BUY":
             self.process_trade(

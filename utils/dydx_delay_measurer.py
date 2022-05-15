@@ -9,11 +9,11 @@ from dydx3.constants import MARKET_ETH_USD
 from dydx3.constants import ORDER_SIDE_BUY
 from dydx3.constants import WS_HOST_MAINNET
 from dydx3.helpers.request_helpers import generate_now_iso
-from connectors.dydx.connector import DydxConnector
+from connectors.dydx.connector import DydxConnector, Network
 
 
 class SpeedMeasure:
-    connector = DydxConnector(MARKET_ETH_USD)
+    connector = DydxConnector(MARKET_ETH_USD, Network.mainnet)
     orders_info = {}
     connector_funcs_speed_info = {}
     iters_num = 0
