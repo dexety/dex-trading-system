@@ -1,0 +1,59 @@
+\section{Трейдер}
+\hyperlink{https://github.com/dexety/dex-trading-system/blob/main/strategy/arbitrage/trader.py}{Трейдер в репозитории}
+
+\definition \textbf{Трейдер} -- программа, которая на основе готовой стратегии, совершает сделки.
+
+\subsection{Асинхронность}
+
+\definition \textbf{Асинхронная функция} -- функция, которая не блокирует основой поток программы.
+
+Наш проект написан на питоне, а он одно-поточный. Поэтому нужно было пользоваться всеми возможностями асинхронности. Для этого в питоне есть очень простой интерфейс:
+
+\begin{verbatim}
+async def slow_calculation():
+    return ...
+    
+async def hard_calculation():
+    return ...
+    
+def main():
+    loop = asyncio.get_event_loop()
+    loop.create_task(
+        slow_calculation(), name="slow_calculation"
+    )
+    loop.create_task(
+        hard_calculation(), name="hard_calculation"
+    )
+    loop.run_forever()
+\end{verbatim}
+
+Здесь мы создали две задачи: \texttt{slow\_calculation} и  \texttt{hard\_calculation}, которые будут выполняться асинхронно, то есть не мешать друг другу своим вычислениями.
+
+
+\subsection{Устройство трейдера}
+
+Трейдер состоит из трех асинхронных задач
+
+\begin{enumerate}
+    \item \texttt{listen\_binance}
+    \item \texttt{listen\_our\_trades}
+    \item \texttt{close\_positions}
+\end{enumerate}
+
+Пройдемся по каждой
+
+\subsubsection{\texttt{listen\_binance}}
+\definition \textbf{Слушать [что-то]} -- значит подключиться по веб-сокету к какому-то серверу и получать от него обновления.
+
+Эта задача создает тред-листенер в Бинанс-коннекторе с хендлером \texttt{binance\_trade\_listener}, который реализует арбитражную стратегию. Когда мы получаем сигнал на покупку или продажу, то выставляем заявку и асинхронно укладываем спать эту задачу на таймаут \texttt{sec\_to\_wait}.
+
+
+\subsubsection{\texttt{listen\_our\_trades}}
+
+Эта задача добавляет подписку на состояние нашего счета на \texttt{Dydx} с хендлером \texttt{accout\_listener}, который в случае открытых позиций на нашем аккаунте, добавляет страхующую заявку в обратном направлении на \texttt{trailing\_percent} процентов от индекс-цены, которая переставляется каждый раз, когда меняется индекс-цена. Эта заявка нужна для того, чтобы застраховаться от резких отскоков в обратную сторону, на которых мы потеряем деньги.
+
+Когда лимитная заявка, которая была выставлена стратежным хендлером, сыграла, то листенер аккаунта закрывает все активные заявки.
+
+\subsubsection{\texttt{close\_positions}}
+
+Эта задача закрывает все открытые позиции и активные заявки, если истек заданный таймаут.
