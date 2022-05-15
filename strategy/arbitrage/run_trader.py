@@ -9,7 +9,7 @@ if __name__ == "__main__":
         sec_to_wait=30,
         sec_after_trade=0,
         signal_threshold=0.003,
-        dydx_market=MARKET_BTC_USD,
+        dydx_market=MARKET_ETH_USD,
         binance_market="ETHUSD_PERP",
     )
     trader = trader.Trader(trader_settings)
