@@ -2,15 +2,17 @@
 
 Для построения модели в катбусте мы использовали индикаторы, которые зависят от трэйдов в окне. Класс \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L5}{\texttt{Indicators}} содержит функции, заполняющие значения фичей и столбца таргета: \texttt{fill\_features\_values} и \texttt{fill\_target\_values}.
 
-\subsection{\href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L15}{\texttt{fill\_target\_values}}}
+\subsection{\texttt{fill\_target\_values}}
+\href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L15}{Функция в репозитории}
 
 Функция принимает словарь для заполнения значений, два окна трэйдов и параметры ордеров \texttt{stop\_profit} и \texttt{stop\_loss}. Функция считает, исполнились бы эти ордеры и выставляет соответствующее значение в словарь для заполнения.
 
-\subsection{\href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L48}{\texttt{fill\_features\_values}}}
+\subsection{\texttt{fill\_features\_values}}
+\href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L48}{Функция в репозитории}
 
-\begin{designation}
+\begin{proposition}
 Окно длины $t$ -- окно, в котором есть все трэйды, случившиеся за интервал времени длины $t$ секунд.
-\end{designation}
+\end{proposition}
 
 Функция принимает словарь для заполнения, окно трэйдов, и два списка вариантов числовых параметров фичей $n$ и $t$. Функция заполняет словарь значениями фичей, которые представлены ниже:
 

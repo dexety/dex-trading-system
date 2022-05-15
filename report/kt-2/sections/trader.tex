@@ -88,7 +88,10 @@ asyncio.run(main())
 
 Пройдемся по каждой
 
-\subsubsection{\href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L167}{\texttt{listen\_binance}}}
+\subsubsection{\texttt{listen\_binance}}
+
+\href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L167}{Функция в репозитории}
+
 \begin{definition}
 \textbf{Слушать [что-то]} -- значит подключиться по веб-сокету к какому-то серверу и получать от него обновления.
 \end{definition} 
@@ -106,6 +109,8 @@ asyncio.run(main())
 \end{enumerate}
 
 
-\subsubsection{\href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L365}{\texttt{account\_listener}}}
+\subsubsection{\texttt{account\_listener}}
+
+\href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L365}{Функция в репозитории}
 
 Эта задача слушает изменения в наших ордерах и позициях, обновляет цену, по которой исполнился маркет, выставляет флаги и разблокирует нужные события, на которых спит функция \texttt{listen\_binance}, тем самым обеспечивая её синзронизацию с биржей.
