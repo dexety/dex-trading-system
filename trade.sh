@@ -1,6 +1,8 @@
-mv debug.log old_debug.log
-
-export PYTHONPATH="${PYTHONPATH}:./"
+export PYTHONPATH=`pwd`
 
 strategy_name=$1
-python3 strategy/$strategy_name/trade.py
+if [[ $strategy_name == "" ]]
+then
+    strategy_name="arbitrage"
+fi
+python3 strategy/$strategy_name/run_trader.py

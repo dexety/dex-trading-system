@@ -6,7 +6,7 @@ from datetime import datetime
 from sliding_window import SlidingWindow
 from connectors.dydx.connector import DydxConnector
 from dydx3.constants import MARKET_ETH_USD
-from utils.logger.trader_logger import DebugLogger, TradeLogger
+from utils.logger import LOGGER
 
 
 def custom_exception_handler(loop, context):
@@ -23,7 +23,7 @@ def handle_task_result(task: asyncio.Task) -> None:
     except asyncio.CancelledError:
         pass
     except Exception as error:
-        DebugLogger.exception("Exception raised by task = %r", task)
+        LOGGER.exception("Exception raised by task = %r", task)
         raise error
 
 
@@ -93,7 +93,7 @@ class Trader:
             symbols=[self.symbol],
             network=self.network,
         )
-        TradeLogger.info(f"Trader initiated. {self.network} {self.symbol}.")
+        LOGGER.info(f"Trader initiated. {self.network} {self.symbol}.")
 
         self.current_measurement = list(
             [0 for _ in range(len(self.time_measurements))]
@@ -190,7 +190,7 @@ class Trader:
                         self.current_measurement[0] = (
                             jump_detected - last_binance_trade
                         )
-                        TradeLogger.info(
+                        LOGGER.info(
                             "--------------------------------------------------------------"
                         )
                         self.cycle_counter += 1
@@ -205,7 +205,7 @@ class Trader:
                         self.current_measurement[2] = (
                             market_sent - market_sending
                         )
-                        TradeLogger.info(
+                        LOGGER.info(
                             f"cycle {self.cycle_counter} | market sent | side: {self.side}"
                         )
 
@@ -231,7 +231,7 @@ class Trader:
                         self.current_measurement[5] = limit_sent - limit_sending
                         # await self.limit_opened_or_canceled()
                         # TODO: нужно будет обработать вариант, когда лимитка по какой то причине не поставилась. В таком случае закрываем позицию.
-                        TradeLogger.info(
+                        LOGGER.info(
                             f"cycle {self.cycle_counter} | limit sent | {self.opp_side} | price: {limit_price}"
                         )
 
@@ -246,7 +246,7 @@ class Trader:
                         )
                         # await self.trailing_opened_or_canceled()
                         # TODO: то же самое, но еще нужно будет отменить limit
-                        TradeLogger.info(
+                        LOGGER.info(
                             f"cycle {self.cycle_counter} | trailing sent | {self.opp_side} | percent: {self.trailing_percent}"
                         )
 
@@ -257,16 +257,16 @@ class Trader:
 
                         if self.mirror_filled.is_set():
                             if self.is_limit_filled:
-                                TradeLogger.info(
+                                LOGGER.info(
                                     f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit(closed_by_limit=True)}"
                                 )
                             elif self.is_trailing_filled:
-                                TradeLogger.info(
+                                LOGGER.info(
                                     f"cycle {self.cycle_counter} | trailing filled | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
                                 )
                             self._cancel_orders()
                         else:
-                            TradeLogger.info(
+                            LOGGER.info(
                                 f"cycle {self.cycle_counter} | timeout reached | cancelling all orders"
                             )
                             self._cancel_orders()
@@ -274,7 +274,7 @@ class Trader:
                             if self.is_limit_opened:
                                 await self.limit_filled_or_canceled.wait()
                                 if self.is_limit_filled:
-                                    TradeLogger.info(
+                                    LOGGER.info(
                                         f"cycle {self.cycle_counter} | limit filled | price: {self.closing_fill['price']} | profit: {self._get_profit(closed_by_limit=True)}"
                                     )
                                     self._reset()
@@ -283,18 +283,18 @@ class Trader:
                             if self.is_trailing_opened:
                                 await self.trailing_filled_or_canceled.wait()
                                 if self.is_trailing_filled:
-                                    TradeLogger.info(
+                                    LOGGER.info(
                                         f"cycle {self.cycle_counter} | trailing filled | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
                                     )
                                     self._reset()
                                     continue
 
-                            TradeLogger.info(
+                            LOGGER.info(
                                 f"cycle {self.cycle_counter} | orders canceled, closing position | {self.opp_side}"
                             )
                             self._close_position()
                             await self.position_closed.wait()
-                            TradeLogger.info(
+                            LOGGER.info(
                                 f"cycle {self.cycle_counter} | position closed | price: {self.closing_fill['price']} | profit: {self._get_profit()}"
                             )
 
@@ -383,7 +383,7 @@ class Trader:
 
         if "orders" in account_update["contents"]:
             for order in account_update["contents"]["orders"]:
-                TradeLogger.info(
+                LOGGER.info(
                     f"UPDATE | {order['clientId']} {order['status']} | {order['cancelReason']}"
                 )
 

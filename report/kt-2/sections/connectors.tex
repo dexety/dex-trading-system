@@ -2,7 +2,9 @@
 
 Чтобы программа могла торговать, ей нужно подключиться к биржей. У выбранных нами бирж есть python-клиенты (python-binance и dydx-v3-python), позволяющие реализовать соединение. Итак, в нашем проекте есть 2 класса-коннектора, BinanceConnector и DydxConnector, с достаточно похожим функционалом.
 
-\subsection{\href{https://github.com/dexety/dex-trading-system/blob/main/connectors/binance/connector.py}{\texttt{BinanceConnector}}}
+\subsection{BinanceConnector}
+
+\href{https://github.com/dexety/dex-trading-system/blob/main/connectors/binance/connector.py}{\texttt{BinanceConnector}}
 
 \begin{definition}
 Инструмент -- пара торгующихся на бирже валют
@@ -38,7 +40,9 @@
 
 Функции start и \_async\_start используются для активации коннектора, подписки на интересующие потоки и начала получения обновлений.
 
-\subsection{\href{https://github.com/dexety/dex-trading-system/blob/main/connectors/dydx/connector.py}{\texttt{DydxConnector}}}
+\subsection{DydxConnector}
+
+\href{https://github.com/dexety/dex-trading-system/blob/main/connectors/dydx/connector.py}{\texttt{DydxConnector}}
 
 Коннетор для dydx очень похож на BinanceConnector, но более приспособлен к торговле, так как именно через него мы размещали ордеры.
 

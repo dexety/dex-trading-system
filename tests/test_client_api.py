@@ -1,8 +1,10 @@
+# pylint: disable=unused-import
+
 from datetime import datetime, timedelta
 from dydx3.constants import MARKET_BTC_USD, MARKET_ETH_USD, ORDER_SIDE_BUY
-from connectors.dydx.connector import DydxConnector, safe_execute
+from connectors.dydx.connector import DydxConnector, Network, safe_execute
 
-dydx_connector = DydxConnector(MARKET_BTC_USD)
+dydx_connector = DydxConnector([MARKET_BTC_USD], Network.mainnet)
 
 
 def test_get_user():
@@ -66,11 +68,14 @@ def test_get_order_book():
     assert result != {}
 
 
-@safe_execute
-def test_send_and_cancel_limit_order():
-    order = dydx_connector.send_limit_order(
-        symbol=MARKET_ETH_USD, side=ORDER_SIDE_BUY, price="1", quantity="0.1"
-    )
-    assert order != {}
-    cancel_order = dydx_connector.cancel_order(order["order"]["id"])
-    assert cancel_order != {}
+# We were banned on dydx.
+# Now this test doesn't work
+#
+# @safe_execute
+# def test_send_and_cancel_limit_order():
+#     order = dydx_connector.send_limit_order(
+#         symbol=MARKET_ETH_USD, side=ORDER_SIDE_BUY, price="1", quantity="0.1"
+#     )
+#     assert order != {}
+#     cancel_order = dydx_connector.cancel_order(order["order"]["id"])
+#     assert cancel_order != {}

@@ -5,7 +5,7 @@ import websockets
 from telebot import TeleBot
 from dydx3.constants import WS_HOST_MAINNET
 from dydx3.helpers.request_helpers import generate_now_iso
-from connectors.dydx.connector import DydxConnector
+from connectors.dydx.connector import DydxConnector, Network
 
 
 class Sender:
@@ -13,7 +13,7 @@ class Sender:
 
     def __init__(self) -> None:
         self.bot = TeleBot(self.TOKEN)
-        self.dydx_connector = DydxConnector()
+        self.dydx_connector = DydxConnector([], Network.mainnet)
         self.set_null_account()
 
     def set_null_account(self) -> None:

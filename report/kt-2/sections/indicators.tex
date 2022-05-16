@@ -1,6 +1,6 @@
 \section{Индикаторы}
 
-Для построения модели в катбусте мы использовали индикаторы, которые зависят от трэйдов в окне. Класс \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L5}{\texttt{Indicators}} содержит функции, заполняющие значения фичей и столбца таргета: \texttt{fill\_features\_values} и \texttt{fill\_target\_values}.
+После маркет-мейкинга мы решили построить модель машинного обучения для предсказания направления рынка. Для построения модели мы использовали индикаторы, которые зависят от трэйдов в окне. Класс \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L5}{\texttt{Indicators}} содержит функции, заполняющие значения фичей и столбца таргета: \texttt{fill\_features\_values} и \texttt{fill\_target\_values}.
 
 \subsection{\texttt{fill\_target\_values}}
 \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L15}{Функция в репозитории}
@@ -10,23 +10,57 @@
 \subsection{\texttt{fill\_features\_values}}
 \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L48}{Функция в репозитории}
 
-\begin{proposition}
-Окно длины $t$ -- окно, в котором есть все трэйды, случившиеся за интервал времени длины $t$ секунд.
-\end{proposition}
+\begin{designation}
+Окно длины $t$ -- окно, в котором есть все трэйды, случившиеся не больше чем за $t$ секунд до какого-то момента. Обозначаем как \textit{window}.
+\end{designation}
 
-Функция принимает словарь для заполнения, окно трэйдов, и два списка вариантов числовых параметров фичей $n$ и $t$. Функция заполняет словарь значениями фичей, которые представлены ниже:
+\begin{designation}
+    \texttt{window[i]} -- i-ый элементы в окне.
+\end{designation}
+\begin{designation}
+    \texttt{window[i].price} и \texttt{window[i].volume} -- цена и объем i-й сделки в окне соответсвенно.
+\end{designation}
 
-\begin{itemize}
+Функция принимает словарь для заполнения, окно трэйдов, и два списка вариантов числовых параметров фичей $n$ и $t$. За $n$ всегда будем обозначать количество сделок в окне. Функция заполняет словарь значениями фичей, которые представлены ниже:
+
+\begin{enumerate}
     \item \texttt{seconds\_since\_midnight} -- количество секунд с начала дня.
     \item \texttt{seconds\_since\_n\_trades\_ago} -- количество секунд, прошедших с первого трэйда в окне из $n$ последних трэйдов.
-    \item \texttt{WI\_exp\_moving\_average} -- экспоненциальное среднее в окне длины $t$.
+    
+    \textbf{Псевдо-формула:} \texttt{(window.end\_time - window[-n].time).to\_seconds()}
+
+    \item \texttt{WI\_exp\_moving\_average} -- экспоненциальное среднее в окне длины $t$. 
+    
+    \textbf{Псевдо-формула:} \texttt{$\alpha$ (window[-1].price + $(1 - \alpha)$ window[-2].price + \dots + $(1 - \alpha)^{n - 1}$ window[-n].price)}
+
     \item \texttt{WI\_weighted\_moving\_average} -- взвешанное среднее в окне длины $t$.
+
+    \textbf{Псевдо-формула:} $\frac{\sum\limits_{i=0}^{n} \texttt{window[i].price} \; \cdot \; \texttt{window[i].volume}}{\sum\limits_{i=0}^{n}\texttt{window[i].size}}$
+
     \item \texttt{WI\_trade\_amount} -- количество сделок в окне длины $t$.
+
+    \textbf{Псевдо-формула:} n
+
     \item \texttt{WI\_trade\_volume} -- суммарный объем сделок в окне длины $t$.
-    \item \texttt{WI\_open\_close\_diff} -- разница между ценой открытия и ценой закрытия в окне длины $t$.
-    \item \texttt{WI\_stochastic\_oscillator} -- стохастический осцилятор. Рассчитывается по формуле $\frac{\texttt{CUR} - \texttt{MIN}}{\texttt{MAX} - \texttt{MIN}}$, где \texttt{CUR} - цена последней сделки, а \texttt{MIN} и \texttt{MAX} - наименьшая и наибольшая цена сделки соответственно в окне длины $t$.
-\end{itemize}
+
+    \textbf{Псевдо-формула:} $\sum\limits_{i=0}^{n}\texttt{window[i].volume}$
+
+    \item \texttt{WI\_open\_close\_diff} -- \textbf{частное} между ценой закрытия и ценой открытия в окне длины $t$.
+
+    \textbf{Псевдо-формула:} \texttt{window[-1].price / window[0].price}
+
+    \item \texttt{WI\_stochastic\_oscillator} -- стохастический осцилятор.
+
+    \textbf{Псевдо-формула:} $\frac{\texttt{CUR} - \texttt{MIN}}{\texttt{MAX} - \texttt{MIN}}$, где \texttt{CUR} - цена последней сделки, а \texttt{MIN} и \texttt{MAX} - наименьшая и наибольшая цена сделки соответственно в окне длины $t$.
+
+\end{enumerate}
 
 Вторая фича зависит от значения $n$ и от направления трэйдов в окне, поэтому для каждой комбинации направления и параметра $n$ в таблице будет свой столбец.
 
 Последние 5 фичей зависят от $t$ и от направления трэйдов в окне, поэтому для каждой комбинации направления, параметра $t$ и фичи в таблице будет свой столбец.
+
+В послдедствии мы решили еще дополнительно делить все скользящие средние на среднее арифметическое цен всех сделок в окне. 
+
+\textbf{Псевдо-формула:} $\texttt{WI\_moving\_average} \; \cdot \; \frac{n}{\sum\limits_{i=0}^{n - 1} window[i].price}$ 
+
+Это сделано для того, чтобы при глобальном изменении стоимости валюты модель продолжала работать.
