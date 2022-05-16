@@ -55,19 +55,15 @@
 % Эта команда создает титульную страницу
 \makeTitlePage
 
-% Здесь будет автоматически генерироваться содержание документа
-\tableofcontents
-
 % Данное окружение оформляет аннотацию: краткое описание текста выделенным абзацем после заголовка
 \begin{abstract}
 \input{sections/abstract.tex}
 \end{abstract}
 
+% Здесь будет автоматически генерироваться содержание документа
+\tableofcontents
+
 \input{sections/intro.tex}
-
-\input{sections/functional.tex}
-
-\input{sections/unfunctional.tex}
 
 \input{sections/connectors.tex}
 
