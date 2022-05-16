@@ -23,4 +23,6 @@
         too-many-public-methods,
         c-extension-no-member,
         dangerous-default-value,
+        fixme,
+        logging-fstring-interpolation,
     '''
