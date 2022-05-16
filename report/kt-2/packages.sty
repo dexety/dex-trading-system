@@ -45,3 +45,31 @@
 
 % Этот пакет позволяет делать активные цветные гиперссылки.
 \RequirePackage[colorlinks=true, urlcolor=blue]{hyperref}
+
+% картинки
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subfig}
+
+\renewcommand{\thesubfigure}{Рис. \arabic{subfigure}}
+\captionsetup[subfigure]{labelformat=simple, labelsep=colon}
+
+% variant 1:
+% \begin{figure}
+% \centering
+% \subfloat[lol]{
+%     \includegraphics[width=0.3\linewidth]{img/seconds-since-50-trades-ago-BUY.png}
+%     }
+% \subfloat[kek]{
+%     \includegraphics[width=0.3\linewidth]{img/open-close-diff-SELL-30-sec.png}
+%     }
+% \end{figure}
+
+
+% variant 2:
+
+% \begin{figure}
+% \center{\includegraphics[width=8cm]{img/seconds-since-50-trades-ago-BUY.png}}
+% \caption{seconds-since-50-trades-ago-BUY}
+% \label{fig:trades_ago}
+% \end{figure}
