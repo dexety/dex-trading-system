@@ -49,7 +49,7 @@
     
 \end{enumerate}
 
-subsection{Индикаторы}
+\subsection{Индикаторы}
 
 Класс \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/utils/indicators.py#L5}{\texttt{Indicators}} содержит функции, заполняющие значения фичей и столбца таргета: \texttt{fill\_features\_values} и \texttt{fill\_target\_values}.
 
@@ -77,11 +77,11 @@ subsection{Индикаторы}
 \begin{enumerate}
     \item \texttt{seconds\_since\_midnight} -- количество секунд с начала дня.
     \item \texttt{seconds\_since\_n\_trades\_ago} -- количество секунд, прошедших с первого трэйда в окне из $n$ последних трэйдов.
-
+    
     \textbf{Псевдо-формула:} \texttt{(window.end\_time - window[-n].time).to\_seconds()}
 
     \item \texttt{WI\_exp\_moving\_average} -- экспоненциальное среднее в окне длины $t$. 
-
+    
     \textbf{Псевдо-формула:} \texttt{$\alpha$ (window[-1].price + $(1 - \alpha)$ window[-2].price + \dots + $(1 - \alpha)^{n - 1}$ window[-n].price)}
 
     \item \texttt{WI\_weighted\_moving\_average} -- взвешанное среднее в окне длины $t$.
