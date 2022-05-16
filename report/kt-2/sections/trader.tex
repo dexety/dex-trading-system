@@ -8,7 +8,7 @@
 
 \subsection{Использованные технологии}
 
-\subsubsection{\texttt{Асинхронная функция}}
+\subsubsection{Асинхронная функция}
 
 \begin{definition}
 \textbf{Асинхронная функция} -- функция, которая не блокирует основой поток программы.
@@ -36,7 +36,7 @@ def main():
 
 Здесь мы создали две задачи: \texttt{slow\_calculation} и  \texttt{hard\_calculation}, которые будут выполняться асинхронно, то есть не мешать друг другу своим вычислениями.
 
-\subsubsection{\texttt{asyncio.Event}}
+\subsubsection{asyncio.Event}
 
 В трейдере, помимо асинхронных функций, используется класс \texttt{asyncio.Event}, позволяющий ждать задачам, пока событие не произойдет в другой задаче и элемент класса не будет разблокирован.
 
@@ -88,7 +88,7 @@ asyncio.run(main())
 
 Пройдемся по каждой
 
-\subsubsection{\texttt{listen\_binance}}
+\subsubsection{listen\_binance}
 
 \href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L167}{Функция в репозитории}
 
@@ -109,7 +109,7 @@ asyncio.run(main())
 \end{enumerate}
 
 
-\subsubsection{\texttt{account\_listener}}
+\subsubsection{account\_listener}
 
 \href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L365}{Функция в репозитории}
 
