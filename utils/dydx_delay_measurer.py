@@ -7,13 +7,13 @@ import threading
 import websockets
 from dydx3.constants import MARKET_ETH_USD
 from dydx3.constants import ORDER_SIDE_BUY
-from dydx3.constants import WS_HOST_MAINNET
+from dydx3.constants import WS_HOST_MAINNET, WS_HOST_ROPSTEN
 from dydx3.helpers.request_helpers import generate_now_iso
 from connectors.dydx.connector import DydxConnector, Network
 
 
 class SpeedMeasure:
-    connector = DydxConnector(MARKET_ETH_USD, Network.mainnet)
+    connector = DydxConnector(MARKET_ETH_USD, Network.ropsten)
     orders_info = {}
     connector_funcs_speed_info = {}
     iters_num = 0
@@ -61,8 +61,8 @@ class SpeedMeasure:
                 self.connector.send_limit_order,
                 symbol=symbol,
                 side=side,
-                price=1,
-                quantity=0.01,
+                price="100",
+                quantity="10",
             )
             time.sleep(2)
             self._speed_test(
@@ -73,7 +73,7 @@ class SpeedMeasure:
             value["average"] /= self.iters_num
 
     async def _websocket_request(self, request, orders_info):
-        async with websockets.connect(WS_HOST_MAINNET) as websocket:
+        async with websockets.connect(WS_HOST_ROPSTEN) as websocket:
             await websocket.send(json.dumps(request))
 
             for _ in range(2 + self.orders_num * 3):
@@ -137,7 +137,7 @@ class SpeedMeasure:
         for _ in range(self.orders_num):
             send_time = datetime.utcnow().timestamp()
             order = self.connector.send_limit_order(
-                symbol=symbol, side=side, price=1, quantity=0.01
+                symbol=symbol, side=side, price="100", quantity="10"
             )
             self.orders_info[order["order"]["id"]] = {}
             self.orders_info[order["order"]["id"]]["send_time"] = send_time
@@ -247,14 +247,13 @@ class SpeedMeasure:
         self.get_connector_funcs_exec_times(
             MARKET_ETH_USD,
             ORDER_SIDE_BUY,
-            iters_num=10,
+            iters_num=1,
             filename="connector_funcs_exec_times.json",
         )
-
         self.get_orders_processing_delays(
             MARKET_ETH_USD,
             ORDER_SIDE_BUY,
-            orders_num=10,
+            orders_num=5,
             filename="orders_processing_delays.json",
         )
 
