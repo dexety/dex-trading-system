@@ -7,7 +7,7 @@ import threading
 import websockets
 from dydx3.constants import MARKET_ETH_USD
 from dydx3.constants import ORDER_SIDE_BUY
-from dydx3.constants import WS_HOST_MAINNET, WS_HOST_ROPSTEN
+from dydx3.constants import WS_HOST_ROPSTEN
 from dydx3.helpers.request_helpers import generate_now_iso
 from connectors.dydx.connector import DydxConnector, Network
 
