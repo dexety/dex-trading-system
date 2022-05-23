@@ -1,0 +1,116 @@
+\section{Трейдер}
+
+\href{https://github.com/dexety/dex-trading-system/blob/main/strategy/arbitrage/trader.py}{Трейдер в репозитории}
+
+\begin{definition}
+\textbf{Трейдер} -- программа, которая на основе готовой стратегии, совершает сделки.
+\end{definition}
+
+\subsection{Использованные технологии}
+
+\subsubsection{Асинхронная функция}
+
+\begin{definition}
+\textbf{Асинхронная функция} -- функция, которая не блокирует основой поток программы.
+\end{definition}
+
+Наш проект написан на питоне, а он одно-поточный. Поэтому нужно было пользоваться всеми возможностями асинхронности. Для этого в питоне есть очень простой интерфейс:
+
+\begin{verbatim}
+async def slow_calculation():
+    return ...
+    
+async def hard_calculation():
+    return ...
+    
+def main():
+    loop = asyncio.get_event_loop()
+    loop.create_task(
+        slow_calculation(), name="slow_calculation"
+    )
+    loop.create_task(
+        hard_calculation(), name="hard_calculation"
+    )
+    loop.run_forever()
+\end{verbatim}
+
+Здесь мы создали две задачи: \texttt{slow\_calculation} и  \texttt{hard\_calculation}, которые будут выполняться асинхронно, то есть не мешать друг другу своим вычислениями.
+
+\subsubsection{asyncio.Event}
+
+В трейдере, помимо асинхронных функций, используется класс \texttt{asyncio.Event}, позволяющий ждать задачам, пока событие не произойдет в другой задаче и элемент класса не будет разблокирован.
+
+\begin{verbatim}
+async def waiter(event):
+    print('waiting for it ...')
+    await event.wait()
+    print('... got it!')
+
+async def main():
+    # Create an Event object.
+    event = asyncio.Event()
+
+    # Spawn a Task to wait until 'event' is set.
+    waiter_task = asyncio.create_task(waiter(event))
+
+    # Sleep for 1 second and set the event.
+    await asyncio.sleep(1)
+    event.set()
+
+    # Wait until the waiter task is finished.
+    await waiter_task
+
+asyncio.run(main())
+\end{verbatim}
+
+В данном примере функция \texttt{waiter} не завершится до тех пор, пока функция \texttt{main} не разблокирует событие строчкой \texttt{event.set()}, потому что \texttt{waiter} находится в ожидании после строчки \texttt{await event.wait()}.
+
+С помощью этого класса можно синхронизировать работу алгоритма торговли с ответами от биржи.
+
+\subsection{Устройство трейдера}
+
+Используемые параметры:
+\begin{itemize}
+    \item \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/research/ib-0002-cross-analysis/trader.py#L52}{\texttt{trailing\_percent}} -- процент, на который цена stop-loss ордера отстает от рыночной при отправке trailing-stop ордера.
+    \item \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/research/ib-0002-cross-analysis/trader.py#L54}{\texttt{profit\_threshold}} -- процент, на который цена лимитки, выставленной по take-profit ордеру отличается от рыночной.
+    \item \href{https://github.com/dexety/dex-trading-system/blob/ca0370d602f2dfa05262b9b8574002f965ac1502/research/ib-0002-cross-analysis/trader.py#L55}{\texttt{sec\_to\_wait}} -- количество секунд, через которое цикл торговли считается завершенным, если ни take-profit, ни trailing-stop ордеры не были исполнены.
+\end{itemize}
+
+Трейдер состоит из двух асинхронных задач и вспомогательных функций. 
+
+Из ключевых вспомогательных функций нужно отметить функцию \href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L303}{\texttt{reset}}, которая переводит все поля класса в состояние для ожидания скачка на бинансе. Она вызывается после успешного завершения цикла торговли, или после отмены ордеров и закрытия позиции в случае, когда какой либо ордер не смог исполниться.
+
+Основные асинхронные задачи:
+\begin{itemize}
+    \item \texttt{listen\_binance}
+    \item \texttt{account\_listener}
+\end{itemize}
+
+Пройдемся по каждой
+
+\subsubsection{listen\_binance}
+
+\href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L167}{Функция в репозитории}
+
+\begin{definition}
+\textbf{Слушать [что-то]} -- значит подключиться по веб-сокету к какому-то серверу и получать от него обновления.
+\end{definition} 
+
+Эта функция реализует логику торговли. В этом трейдере по техническим причинам не получилось использовать функционал коннектора для бинанса, поэтому подписываться на обновления пришлось в ручную. Функция держит окно трейдов на одном направлении фиксированной длины, и если перепад цены превысил порог, то запускается алгоритм торговли:
+
+\begin{enumerate}
+    \item Отправляется маркет ордер. Функция входит в режим ожидания с помощью \texttt{asyncio.Event} и ждет, пока с биржи придет ответ об исполнении ордера. Если с биржи приходит сообщение об отмене ордера, то вызывается функция \texttt{reset} и трэйдер возвращается в состояние ожидания скачка цены на бинансе.
+    \item Когда \texttt{account\_listener} сообщил об успешном выполнении маркет ордера и сохранил цену по которой он исполнился, трейдер выставляет \texttt{take-profit} и \texttt{trailing-stop} ордеры с заданными при инициализации класса параметрами и на протяжении \texttt{sec\_to\_wait} секунд ожидает исполнения хотя бы одного из них.
+    \begin{itemize}
+        \item Если за \texttt{sec\_to\_wait} секунд ордеры не закрылись, то они отменяются. Далее закрывается позиция в которую мы зашли маркетом, и когда с биржи приходит сообщение о закрытии позиции, цикл торговли считается завершенным.
+        \item Если какой-то из ордеров исполнился, то мы в любом случае отменяем оставшийся. Если исполнился лимит, то мы в плюсе, если трэйлинг стоп, то, скорее всего, в минусе. После отмены цикл считается завершенным.
+    \end{itemize}
+    
+\end{enumerate}
+
+
+\subsubsection{account\_listener}
+
+\href{https://github.com/dexety/dex-trading-system/blob/main/research/ib-0002-cross-analysis/trader.py#L365}{Функция в репозитории}
+
+Эта задача слушает изменения в наших ордерах и позициях, обновляет цену, по которой исполнился маркет, выставляет флаги и разблокирует нужные события, на которых спит функция \texttt{listen\_binance}, тем самым обеспечивая её синзронизацию с биржей.

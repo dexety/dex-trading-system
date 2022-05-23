@@ -38,11 +38,11 @@
 %сюда можно воткнуть картинку подписи
 \setStudentSgn{}
 
-\setStudentDate{17.02.2022}
+\setStudentDate{17.05.2022}
 \setAdvisor{Казаков Евгений Александрович}
 \setAdvisorTitle{разработчик}
 \setAdvisorAffiliation{Facebook inc.}
-\setAdvisorDate{17.02}
+\setAdvisorDate{17.05}
 \setGrade{10}
 %сюда можно воткнуть картинку подписи
 \setAdvisorSgn{}
@@ -55,19 +55,29 @@
 % Эта команда создает титульную страницу
 \makeTitlePage
 
-% Здесь будет автоматически генерироваться содержание документа
-\tableofcontents
-
 % Данное окружение оформляет аннотацию: краткое описание текста выделенным абзацем после заголовка
 \begin{abstract}
 \input{sections/abstract.tex}
 \end{abstract}
 
+% Здесь будет автоматически генерироваться содержание документа
+\tableofcontents
+
 \input{sections/intro.tex}
 
-\input{sections/functional.tex}
+\input{sections/connectors.tex}
 
-\input{sections/unfunctional.tex}
+\input{sections/market_making.tex}
+
+\input{sections/catboost.tex}
+
+\input{sections/arbitrage.tex}
+
+\input{sections/trader.tex}
+
+\input{sections/conclusion.tex}
+
+\input{sections/extra.tex}
 
 
 % Здесь автоматически генерируется библиография. Первая команда задает стиль оформления библиографии, а вторая указывает на имя файла с расширением bib, в котором находится информация об источниках.
