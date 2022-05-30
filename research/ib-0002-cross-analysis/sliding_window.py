@@ -5,11 +5,13 @@ from datetime import datetime
 class SlidingWindow:
     def __init__(self, window_millisec: int = 1000):
         self.trades_timestamps = deque()
+        self.target_params = deque()
         self.mins = deque()
         self.maxs = deque()
         self.window_size = window_millisec
 
     def clear(self):
+        self.target_params.clear()
         self.trades_timestamps.clear()
         self.mins.clear()
         self.maxs.clear()
@@ -45,7 +47,7 @@ class SlidingWindow:
         return self.trades_timestamps[0]
 
     def push_back(
-        self, price: float, timestamp: int
+        self, target_param: float, timestamp: int
     ) -> bool:  # returns true if min or max is changed
         changes = False
         if timestamp < self.get_last_trade():
@@ -53,6 +55,7 @@ class SlidingWindow:
 
         while timestamp - self.get_first_trade() > self.window_size:
             first_trade = self.trades_timestamps.popleft()
+            self.target_params.popleft()
             if first_trade == self.get_min_timestamp():
                 self.mins.popleft()
                 changes = True
@@ -60,18 +63,19 @@ class SlidingWindow:
                 self.maxs.popleft()
                 changes = True
         self.trades_timestamps.append(timestamp)
+        self.target_params.append(target_param)
 
         old_min = self.get_min()
-        while len(self.mins) != 0 and self.mins[-1][0] >= price:
+        while len(self.mins) != 0 and self.mins[-1][0] >= target_param:
             self.mins.pop()
-        self.mins.append((price, timestamp))
+        self.mins.append((target_param, timestamp))
         if old_min != self.get_min():
             changes = True
 
         old_max = self.get_max()
-        while len(self.maxs) != 0 and self.maxs[-1][0] <= price:
+        while len(self.maxs) != 0 and self.maxs[-1][0] <= target_param:
             self.maxs.pop()
-        self.maxs.append((price, timestamp))
+        self.maxs.append((target_param, timestamp))
         if old_max != self.get_max():
             changes = True
         return changes

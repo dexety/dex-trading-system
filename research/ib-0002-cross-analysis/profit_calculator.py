@@ -9,24 +9,25 @@ from utils.helpful_scripts import string_to_datetime
 class ProfitCalculator:
     dydx_commission = 0.0005
 
-    def __init__(self, signal_filename: str, predict_filename: str, mode: str = "", signals_dump: str = ""):
+    def __init__(self, signal_filename: str, predict_filename: str = "", mode: str = "", signals_dump: str = ""):
         self.signal_filename = signal_filename
         self.predict_filename = predict_filename
-        self.signal_threshold = 0.0021
+        self.signal_threshold = 0.0025
         self.window = 1000  # all time in millisecs
         self.signal_side = "BUY"
-        self.latency_us_predict = 0
+        self.latency_us_predict = 500
         self.latency_signal_us = 300
-        self.after_signal = 20000
-        self.loss_threshold = 0.0014
-        self.profit_threshold = 0.0024
+        self.after_signal = 3000
+        self.loss_threshold = 0.0015
+        self.profit_threshold = 0.0021
         self.after_last_trade = 3000
         self.pos_open = 20000
         self.recover_time = 3000
         self.trades = []
         self.signals = []
         self.signals_stats = []
-        self.slide = SlidingWindow(self.window)
+        self.price_slide = SlidingWindow(self.window)
+        self.quantity_slide = SlidingWindow(self.window)
         self.graph = go.Figure()
         self.signal_csv_line_handler = self._binance_csv_line_handler
         self.predict_csv_line_handler = self._dydx_csv_line_handler
@@ -45,17 +46,21 @@ class ProfitCalculator:
     def _binance_csv_line_handler(line: list):
         time = datetime.fromtimestamp(int(line[4]) / 1000)
         price = float(line[1])
+        quantity = float(line[2])
         side = "SELL" if line[-1] == "true" else "BUY"
-        return price, time, side
+        return time, price, quantity, side
 
-    def _update_window(self, price, time) -> str:
-        if self.slide.push_back(
+    def _update_window(self, price, quantity, time) -> str:
+        self.quantity_slide.push_back(
+            quantity, time.timestamp() * 1000
+        )
+        if self.price_slide.push_back(
                 price, time.timestamp() * 1000
         ):
-            max_in_window = self.slide.get_max()
-            max_timestamp = self.slide.get_max_timestamp()
-            min_in_window = self.slide.get_min()
-            min_timestamp = self.slide.get_min_timestamp()
+            max_in_window = self.price_slide.get_max()
+            max_timestamp = self.price_slide.get_max_timestamp()
+            min_in_window = self.price_slide.get_min()
+            min_timestamp = self.price_slide.get_min_timestamp()
             if max_in_window / min_in_window >= (
                     1 + self.signal_threshold
             ):
@@ -80,16 +85,23 @@ class ProfitCalculator:
     def get_signals(self):
         with open(self.signal_filename, "r", encoding="utf-8") as signal_file:
             csv_reader = csv.reader(signal_file, delimiter=",")
-            for line in tqdm(csv_reader, desc="get signals"):
-                price, time, side = self.signal_csv_line_handler(line)
-                time += timedelta(milliseconds=self.latency_signal_us)
-                if side == self.signal_side:
-                    direction = self._update_window(price, time)
-                    if direction == "":
-                        continue
-                    self.signals_stats.append(None)  # TODO : collect stats
-                    self.signals.append({"time": time, "direction": direction})
-                    self.slide.clear()
+            try:
+                for line in tqdm(csv_reader, desc="get signals"):
+                    time, price, quantity, side = self.signal_csv_line_handler(line)
+                    time += timedelta(milliseconds=self.latency_signal_us)
+                    if side == self.signal_side:
+                        direction = self._update_window(price, quantity, time)
+                        if direction == "":
+                            continue
+                        stat = {"max_quantity": self.quantity_slide.get_max(),
+                                "jump_time_length":
+                                    self.quantity_slide.get_last_trade() - self.quantity_slide.get_first_trade()}
+                        self.signals_stats.append(stat)  # TODO : collect stats
+                        self.signals.append({"time": time, "direction": direction})
+                        self.price_slide.clear()
+                        self.quantity_slide.clear()
+            except Exception as e:
+                return self.signals
 
         return self.signals
 
@@ -106,7 +118,7 @@ class ProfitCalculator:
         with open(self.signal_filename, "r", encoding="utf-8") as signal_file:
             csv_reader = csv.reader(signal_file, delimiter=",")
             for line in csv_reader:
-                price, time, side = self.signal_csv_line_handler(list(line))
+                time, price, quantity, side = self.signal_csv_line_handler(list(line))
                 if side == self.signal_side:
                     prices.append(price)
                     times.append(time)
@@ -137,7 +149,7 @@ class ProfitCalculator:
         # a = random.choice([0.0008, 0.001, 0.0012])
         # b = random.choice([0.0018, 0.002, 0.0022, 0.0024])
         # c = random.choice([10000, 15000, 20000])
-        return 0.0014, 0.0024, 20000
+        return 0.0011, 0.0013, 20000
 
     def set_predict_csv_line_handler(self, handler: callable):
         self.predict_csv_line_handler = handler
@@ -180,10 +192,15 @@ class ProfitCalculator:
             sig_num = 0
 
             for line in tqdm(csv_reader, desc="get trades"):
+                # while self.signals_stats[sig_num]["max_quantity"] >= 1200 \
+                #         or self.signals_stats[sig_num]["jump_time_length"] <= 100:
+                #     sig_num += 1
+                #     if sig_num >= len(self.signals):
+                #         self._check_trades()
+                #         return self.trades
                 price, time, side = self.predict_csv_line_handler(line)
-                if time <= self.signals[sig_num]["time"] + timedelta(milliseconds=self.latency_us_predict):
-                    continue
-                while side != self.signals[sig_num]["direction"]:
+                while side != self.signals[sig_num]["direction"] or\
+                        time <= self.signals[sig_num]["time"] + timedelta(milliseconds=self.latency_us_predict):
                     try:
                         price, time, side = self.predict_csv_line_handler(next(csv_reader))
                     except StopIteration:
@@ -308,7 +325,7 @@ class ProfitCalculator:
         self.trades.clear()
         self.signals.clear()
         self.signals_stats.clear()
-        self.slide.clear()
+        self.price_slide.clear()
         self.graph.data = []
 
     def dump_signals(self, filename: str):

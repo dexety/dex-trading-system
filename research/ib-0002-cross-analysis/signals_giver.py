@@ -1,9 +1,9 @@
-from sliding_window import SlidingWindow
 import plotly.graph_objs as go
+from trades_handler import TradesHandler
 import csv
 from datetime import datetime, timedelta
 from tqdm import tqdm
-from utils.helpful_scripts import string_to_datetime
+import json
 
 
 class SignalsGiver:
@@ -25,18 +25,10 @@ class SignalsGiver:
         else:
             raise KeyError("Bad mode")
 
-        self.signal_threshold = 0.0021
-        self.window = 1000  # all time in millisecs
         self.signal_side = "BUY"
-        self.latency_us_predict = 0
         self.latency_signal_us = 300
-        self.after_signal = 20000
-        self.recover_time = 3000
 
-        self.signals: list = []
-        self.signals_stats: list = []
-
-        self.slide = SlidingWindow(self.window)
+        self.trades_handler = TradesHandler()
         self.graph = go.Figure()
 
         self.signal_csv_line_handler: callable = self._binance_csv_line_handler
@@ -45,38 +37,17 @@ class SignalsGiver:
     def _binance_csv_line_handler(line: list):
         time = datetime.fromtimestamp(int(line[4]) / 1000)
         price = float(line[1])
+        quantity = float(line[2])
         side = "SELL" if line[-1] == "true" else "BUY"
-        return price, time, side
-
-    def _update_window(self, price, time) -> str:
-        if self.slide.push_back(
-                price, time.timestamp() * 1000
-        ):
-            max_in_window = self.slide.get_max()
-            max_timestamp = self.slide.get_max_timestamp()
-            min_in_window = self.slide.get_min()
-            min_timestamp = self.slide.get_min_timestamp()
-            if max_in_window / min_in_window >= (
-                    1 + self.signal_threshold
-            ):
-                if max_timestamp > min_timestamp:
-                    return "BUY"
-                elif max_timestamp < min_timestamp:
-                    return "SELL"
-        return ""
+        return time, price, quantity, side
 
     def _get_signals_from_iterable(self, iterable: iter):
         for line in tqdm(iterable, desc="get signals"):
-            price, time, side = self.signal_csv_line_handler(line)
+            time, price, quantity, side = self.signal_csv_line_handler(line)
             time += timedelta(milliseconds=self.latency_signal_us)
             if side == self.signal_side:
-                direction = self._update_window(price, time)
-                if direction == "":
-                    continue
-                self.signals_stats.append(None)  # TODO : collect stats
-                self.signals.append({"time": time, "direction": direction})
-                self.slide.clear()
-        return self.signals
+                self.trades_handler.handle(time, price, quantity)
+        return self.trades_handler.signals
 
     def get_signals(self):
         if self.mode == "file":
@@ -88,7 +59,7 @@ class SignalsGiver:
 
     def show_signals(self):
         self.graph.data = []
-        if len(self.signals) == 0:
+        if len(self.trades_handler.signals) == 0:
             self.get_signals()
 
         self.graph.update_layout(
@@ -99,7 +70,7 @@ class SignalsGiver:
         with open(self.trades_file, "r", encoding="utf-8") as signal_file:
             csv_reader = csv.reader(signal_file, delimiter=",")
             for line in csv_reader:
-                price, time, side = self.signal_csv_line_handler(list(line))
+                time, price, quantity, side = self.signal_csv_line_handler(list(line))
                 if side == self.signal_side:
                     prices.append(price)
                     times.append(time)
@@ -111,17 +82,27 @@ class SignalsGiver:
                 marker_color="blue" if self.signal_side == "BUY" else "red",
             )
         )
-        for signal in self.signals:
+        for signal in self.trades_handler.signals:
             self.graph.add_vline(x=signal["time"], line_width=3,
                                  line_color="green" if signal["direction"] == "BUY" else "red",
                                  opacity=0.5)
         self.graph.show()
 
     def dump_signals(self, filename: str):
-        if len(self.signals) == 0:
+        if len(self.trades_handler.signals) == 0:
             self.get_signals()
 
         with open(filename, "w+", encoding="utf-8") as file:
             csv_writer = csv.writer(file)
-            for signal in tqdm(self.signals, desc="dump signals", total=len(self.signals)):
+            for signal in tqdm(self.trades_handler.signals, desc="dump signals", total=len(self.trades_handler.signals)):
                 csv_writer.writerow([signal["time"].strftime("%Y-%m-%dT%H:%M:%S.%fZ"), signal["direction"]])
+
+    def dump_stats(self, filename: str):
+        if len(self.trades_handler.signals) == 0:
+            self.get_signals()
+
+        with open(filename, "w+", encoding="utf-8") as file:
+            json.dump(self.trades_handler.stats, file, indent=4)
+
+
+
