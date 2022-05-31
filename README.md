@@ -9,7 +9,7 @@ export ETH_PRIVATE_KEY=$YOUR_ETH_PRIVATE_KEY
 export BINANCE_API_KEY=$YOUR_BINANCE_API_KEY
 export BINANCE_API_SECRET=$YOUR_BINANCE_API_SECRET
 ```
-2. Tweak trading parameters as you wish in /path/to/dex-trading-system/strategy/argitrage/run_trader.py
+2. Tweak trading parameters as you wish in `/path/to/dex-trading-system/strategy/argitrage/run_trader.py`
 3. Go to the repository and run trader
 ```bash
 cd /path/to/dex-trading-system
