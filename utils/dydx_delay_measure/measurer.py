@@ -7,7 +7,7 @@ import threading
 import websockets
 from dydx3.constants import MARKET_ETH_USD
 from dydx3.constants import ORDER_SIDE_BUY
-from dydx3.constants import WS_HOST_MAINNET
+from dydx3.constants import WS_HOST_MAINNET, WS_HOST_ROPSTEN
 from dydx3.helpers.request_helpers import generate_now_iso
 from connectors.dydx.connector import DydxConnector
 
@@ -73,7 +73,7 @@ class SpeedMeasure:
             value["average"] /= self.iters_num
 
     async def _websocket_request(self, request, orders_info):
-        async with websockets.connect(WS_HOST_MAINNET) as websocket:
+        async with websockets.connect(WS_HOST_ROPSTEN) as websocket:
             await websocket.send(json.dumps(request))
 
             for _ in range(2 + self.orders_num * 3):
@@ -247,7 +247,7 @@ class SpeedMeasure:
         self.get_connector_funcs_exec_times(
             MARKET_ETH_USD,
             ORDER_SIDE_BUY,
-            iters_num=10,
+            iters_num=1,
             filename="connector_funcs_exec_times.json",
         )
 
