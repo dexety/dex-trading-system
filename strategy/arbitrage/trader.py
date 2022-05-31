@@ -1,14 +1,12 @@
 import asyncio
-import random
-import dataclasses
-import websockets
 import contextlib
+import dataclasses
 import json
-
+import random
 from datetime import datetime
+import websockets
 
 from connectors.dydx.connector import DydxConnector
-from dydx3.constants import MARKET_ETH_USD
 from utils.logger import LOGGER
 from utils.sliding_window import SlidingWindow
 
@@ -43,10 +41,13 @@ class Settings:
     dydx_network: str
     round_digits: int
 
+
 class Trader:
+    # pylint: disable=line-too-long
+    # pylint: disable=too-many-branches
+    # pylint: disable=too-few-public-methods
     maker_comission = 0.0002
     taker_comission = 0.0005
-
     symbol_binance = "btcusd_perp"
     socket_binance = f"wss://dstream.binance.com/ws/{symbol_binance}@trade"
 
@@ -73,21 +74,27 @@ class Trader:
         self.mirror_filled = asyncio.Event()
         self.position_closed = asyncio.Event()
 
+        self.side = "BUY"
+        self.opp_side = "SELL"
+
         self.is_market_filled = False
         self.is_limit_filled = False
         self.is_trailing_filled = False
+        self.is_closing_filled = False
 
         self.is_limit_opened = False
         self.is_trailing_opened = False
 
-        self.openeng_fill = dict()
-        self.closing_fill = dict()
+        self.openeng_fill = {}
+        self.closing_fill = {}
 
         self.dydx_connector = DydxConnector(
             symbols=[self.dydx_symbol],
             network=self.dydx_network,
         )
-        LOGGER.info(f"Trader initiated. {self.dydx_network} {self.dydx_symbol}.")
+        LOGGER.info(
+            f"Trader initiated. {self.dydx_network} {self.dydx_symbol}."
+        )
 
         self.loop = asyncio.get_event_loop()
 
@@ -109,7 +116,8 @@ class Trader:
             else -self.trailing_percent
         )
 
-    def _get_worst_price(self, side: str) -> str:
+    @staticmethod
+    def _get_worst_price(side: str) -> str:
         return str(1 if side == "SELL" else 10 ** 8)
 
     def _get_profit(self, closed_by_limit=False):
@@ -137,14 +145,10 @@ class Trader:
                 f"Binance trade listener is still alive.\n"
                 f"Current jump: {max_in_window / min_in_window}\n"
             )
-        if self.sliding_window.push_back(
-                price, time
-        ):
+        if self.sliding_window.push_back(price, time):
             max_in_window = self.sliding_window.get_max_value()
             min_in_window = self.sliding_window.get_min_value()
-            if max_in_window / min_in_window >= (
-                    1 + self.signal_threshold
-            ):
+            if max_in_window / min_in_window >= (1 + self.signal_threshold):
                 timestamp_of_max = self.sliding_window.get_timestamp_of_max()
                 timestamp_of_min = self.sliding_window.get_timestamp_of_min()
                 if timestamp_of_max > timestamp_of_min:
@@ -173,11 +177,9 @@ class Trader:
                     and trade["T"] / 1000
                     > self.dispatch_time.second + self.sec_to_wait + 0.5
                 ):
-                    if (
-                        self._update_window(float(trade["p"]), int(trade["T"]))
-                    ):
+                    if self._update_window(float(trade["p"]), int(trade["T"])):
                         await self._initiate_trade_cycle()
-    
+
     async def _initiate_trade_cycle(self):
         LOGGER.info(
             "--------------------------------------------------------------"
@@ -195,9 +197,7 @@ class Trader:
             self._reset()
             return
 
-        limit_price = self._get_limit_price(
-            self.openeng_fill["price"]
-        )
+        limit_price = self._get_limit_price(self.openeng_fill["price"])
 
         self._send_limit(limit_price)
         LOGGER.info(
@@ -212,9 +212,7 @@ class Trader:
         )
 
         with contextlib.suppress(asyncio.TimeoutError):
-            await asyncio.wait_for(
-                self.mirror_filled.wait(), self.sec_to_wait
-            )
+            await asyncio.wait_for(self.mirror_filled.wait(), self.sec_to_wait)
 
         if self.mirror_filled.is_set():
             if self.is_limit_filled:
@@ -280,7 +278,7 @@ class Trader:
         self.dydx_connector.send_market_order(
             symbol=self.dydx_symbol,
             side=self.side,
-            price=self._get_worst_price(side=self.side),
+            price=Trader._get_worst_price(self.side),
             quantity=str(self.quantity),
             client_id=f"mk-{self.side}-{self.cycle_counter}-{self.start_time}",  # MarKet
         )
@@ -289,7 +287,7 @@ class Trader:
         self.dydx_connector.send_trailing_stop_order(
             symbol=self.dydx_symbol,
             side=self.opp_side,
-            price=self._get_worst_price(side=self.opp_side),
+            price=Trader._get_worst_price(self.opp_side),
             quantity=str(self.quantity),
             trailing_percent=self._get_trailing_percent(),
             client_id=f"ts-{self.opp_side}-{self.cycle_counter}-{self.start_time}",  # Trailing Stop
@@ -308,7 +306,7 @@ class Trader:
         self.dydx_connector.send_market_order(
             symbol=self.dydx_symbol,
             side=self.opp_side,
-            price=self._get_worst_price(side=self.opp_side),
+            price=Trader._get_worst_price(self.opp_side),
             quantity=str(self.quantity),
             client_id=f"cp-{self.opp_side}-{self.cycle_counter}-{self.start_time}",  # Close Position
         )

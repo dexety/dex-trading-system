@@ -143,14 +143,10 @@ class Trader:
         )
 
     def _update_window(self, price: float, time: int) -> bool:
-        if self.sliding_window.push_back(
-                price, time
-        ):
+        if self.sliding_window.push_back(price, time):
             max_in_window = self.sliding_window.get_max()
             min_in_window = self.sliding_window.get_min()
-            if max_in_window / min_in_window >= (
-                    1 + self.signal_threshold
-            ):
+            if max_in_window / min_in_window >= (1 + self.signal_threshold):
                 timestamp_of_max = self.sliding_window.get_timestamp_of_max()
                 timestamp_of_min = self.sliding_window.get_timestamp_of_min()
                 if timestamp_of_max > timestamp_of_min:
@@ -180,9 +176,7 @@ class Trader:
                     > self.dispatch_time.second + self.sec_to_wait + 0.5
                 ):
 
-                    if (
-                        self._update_window(float(trade["p"]), int(trade["T"]))
-                    ):
+                    if self._update_window(float(trade["p"]), int(trade["T"])):
                         jump_detected = datetime.now()
                         last_binance_trade = datetime.fromtimestamp(
                             trade["T"] / 1000
