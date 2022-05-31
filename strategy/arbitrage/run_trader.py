@@ -1,4 +1,5 @@
-import trader
+from connectors.dydx.connector import Network
+import strategy.arbitrage.trader as trader
 from dydx3.constants import MARKET_ETH_USD
 
 if __name__ == "__main__":
@@ -8,9 +9,10 @@ if __name__ == "__main__":
         profit_threshold=0.0015,
         sec_to_wait=30,
         sec_after_trade=0,
-        signal_threshold=0.003,
-        dydx_market=MARKET_ETH_USD,
-        binance_market="ETHUSD_PERP",
+        signal_threshold=0.00015,
+        dydx_symbol=MARKET_ETH_USD,
+        dydx_network=Network.ropsten,
+        round_digits=1
     )
-    trader = trader.Trader(trader_settings)
-    trader.run()
+    trader_old = trader.Trader(settings=trader_settings)
+    trader_old.run()

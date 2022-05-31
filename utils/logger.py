@@ -15,4 +15,4 @@ stdout_logger_handler.setLevel(LEVEL)
 stdout_logger_handler.setFormatter(logging.Formatter(FORMAT))
 
 LOGGER.addHandler(file_logger_handler)
-LOGGER.addHandler(stdout_logger_handler)
+# LOGGER.addHandler(stdout_logger_handler)

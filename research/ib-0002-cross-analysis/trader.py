@@ -4,7 +4,7 @@ import json
 import contextlib
 from datetime import datetime
 from sliding_window import SlidingWindow
-from connectors.dydx.connector import DydxConnector
+from connectors.dydx.connector import DydxConnector, Network
 from dydx3.constants import MARKET_ETH_USD
 from utils.logger import LOGGER
 
@@ -33,7 +33,7 @@ class Trader:
 
     symbol_binance = "btcusd_perp"
     socket_binance = f"wss://dstream.binance.com/ws/{symbol_binance}@trade"
-    network = "ropsten"
+    network = Network.ropsten
     symbol = MARKET_ETH_USD
 
     time_measurements = [
